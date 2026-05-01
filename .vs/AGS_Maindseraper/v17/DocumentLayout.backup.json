@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\sansp\\Desktop\\AGS2026Summer\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\sansp\\Desktop\\AGS2026Summer\\Application.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Application.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{264C5A57-6694-45B6-A21B-B89D41D9D434}|AGS_Maindseraper.vcxproj|C:\\Users\\sansp\\Desktop\\AGS2026Summer\\Application.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{264C5A57-6694-45B6-A21B-B89D41D9D434}|AGS_Maindseraper.vcxproj|solutionrelative:Application.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\sansp\\Desktop\\AGS2026Summer\\Application.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Application.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{264C5A57-6694-45B6-A21B-B89D41D9D434}|AGS_Maindseraper.vcxproj|C:\\Users\\sansp\\Desktop\\AGS2026Summer\\Application.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{264C5A57-6694-45B6-A21B-B89D41D9D434}|AGS_Maindseraper.vcxproj|solutionrelative:Application.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -43,7 +43,8 @@
               "RelativeToolTip": "Application.cpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-05-01T04:03:10.247Z"
+              "WhenOpened": "2026-05-01T04:03:10.247Z",
+              "EditorCaption": ""
             }
           ]
         }
