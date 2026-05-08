@@ -1,0 +1,26 @@
+## Gitで「管理しないファイル」を指定するための設定ファイル
+## 特定のフォルダやファイルをコミット対象外にします
+
+# VisualStudio ビルド結果
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Aa][Rr][Mm]64[Ee][Cc]/
+bld/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+
+# VisualStudio キャッシュフォルダ
+.vs/
+
+# DxLibのログファイル
+Log.txt
