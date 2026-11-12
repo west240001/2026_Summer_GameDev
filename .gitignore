@@ -24,3 +24,23 @@ bld/
 
 # DxLibのログファイル
 Log.txt
+
+# --- Unity: BackbeatDiner ---
+BackbeatDiner/[Ll]ibrary/
+BackbeatDiner/[Tt]emp/
+BackbeatDiner/[Oo]bj/
+BackbeatDiner/[Bb]uild/
+BackbeatDiner/[Bb]uilds/
+BackbeatDiner/[Ll]ogs/
+BackbeatDiner/[Uu]ser[Ss]ettings/
+BackbeatDiner/MemoryCaptures/
+BackbeatDiner/[Rr]ecordings/
+BackbeatDiner/.vs/
+BackbeatDiner/*.csproj
+BackbeatDiner/*.unityproj
+BackbeatDiner/*.sln
+BackbeatDiner/*.suo
+BackbeatDiner/*.user
+BackbeatDiner/*.userprefs
+BackbeatDiner/sysinfo.txt
+BackbeatDiner/.idea/
