@@ -1,4 +1,5 @@
-# Coop（ビート・コミュ）
+# Coop（KG-3）
 
-- 設計: `docs/kg-3-limited-comms.md`
-- プロト: Beat-B1〜F4 相当の SE モチーフ ScriptableObject + コミュパッド送信
+| Script | Role |
+|--------|------|
+| `BeatLexiconDemo` | Keys **1–4** play short procedural SE motifs (beat lexicon placeholder) |

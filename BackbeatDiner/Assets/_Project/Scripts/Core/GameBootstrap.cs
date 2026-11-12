@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BackbeatDiner.Core
 {
     /// <summary>
     /// 起動時の常駐シェル。プロトはシーン遷移・マネージャ登録の起点にする。
+    /// Week1: RhythmPrototype シーンでは専用ブートが担当するため軽くログのみ。
     /// </summary>
     public sealed class GameBootstrap : MonoBehaviour
     {
@@ -25,7 +27,8 @@ namespace BackbeatDiner.Core
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            Debug.Log("[BACKBEAT DINER] Bootstrap ready — Unity production scaffold.");
+            var scene = SceneManager.GetActiveScene().name;
+            Debug.Log($"[BACKBEAT DINER] Bootstrap ready — scene={scene}. Week1: open RhythmPrototype (Space hit / 1-4 lexicon).");
         }
     }
 }
