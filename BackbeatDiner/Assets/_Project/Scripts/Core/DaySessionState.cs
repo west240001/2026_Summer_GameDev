@@ -41,6 +41,7 @@ namespace BackbeatDiner.Core
         private bool _ended;
         private bool _running;
         private bool _chartCompleteLatched;
+        private bool _networkFollower;
 
         public int PrepUnits => _prepUnits;
         public int ServedCount => _servedCount;
@@ -77,6 +78,14 @@ namespace BackbeatDiner.Core
         public void SetEndSessionOnChartComplete(bool value)
         {
             endSessionOnChartComplete = value;
+        }
+
+        /// <summary>
+        /// Netcode client: skip local beat-budget chart completion (host drives chart/gap via sync).
+        /// </summary>
+        public void SetNetworkFollower(bool follower)
+        {
+            _networkFollower = follower;
         }
 
         /// <summary>Expand day time budget for a multi-chart setlist (+ buffer).</summary>
@@ -273,6 +282,27 @@ namespace BackbeatDiner.Core
             RefreshHud();
         }
 
+        /// <summary>Netcode client mirror: absolute prep from host NetworkVariable.</summary>
+        public void ApplyNetworkPrepUnits(int prepUnits)
+        {
+            _prepUnits = Mathf.Max(0, prepUnits);
+            RefreshHud();
+        }
+
+        /// <summary>Netcode client mirror: absolute sales from host NetworkVariable.</summary>
+        public void ApplyNetworkSalesScore(int salesScore)
+        {
+            _salesScore = Mathf.Max(0, salesScore);
+            RefreshHud();
+        }
+
+        /// <summary>Netcode client mirror: absolute serve count from host NetworkVariable.</summary>
+        public void ApplyNetworkServedCount(int servedCount)
+        {
+            _servedCount = Mathf.Max(0, servedCount);
+            RefreshHud();
+        }
+
         private void HandleJudged(HitJudgement judgement, double delta, int combo, int laneScore)
         {
             AddPrepFromJudgement(judgement);
@@ -284,6 +314,11 @@ namespace BackbeatDiner.Core
         private void HandleBeat(int beatIndex, double scheduledDsp)
         {
             _ = scheduledDsp;
+            if (_networkFollower)
+            {
+                return;
+            }
+
             // BeatIndex after FireBeat has already advanced; fire uses the index being fired.
             // Complete chart when the fired beat reaches maxBeats-1 (0-based → 32nd beat is index 31).
             if (!_ended && beatIndex + 1 >= maxBeats)

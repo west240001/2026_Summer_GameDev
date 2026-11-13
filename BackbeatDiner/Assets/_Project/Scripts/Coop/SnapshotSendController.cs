@@ -203,6 +203,12 @@ namespace BackbeatDiner.Coop
             RefreshHud();
         }
 
+        /// <summary>Netcode: deliver C2 payload to the other peer (Back Snap-In panel).</summary>
+        public static void RaiseRemoteSnapshot(SnapshotPayload payload)
+        {
+            SnapshotSent?.Invoke(payload);
+        }
+
         private void RefreshHud()
         {
             if (_status == null)

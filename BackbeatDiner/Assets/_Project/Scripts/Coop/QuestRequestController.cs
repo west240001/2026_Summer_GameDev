@@ -96,6 +96,12 @@ namespace BackbeatDiner.Coop
             return true;
         }
 
+        /// <summary>Netcode: deliver C1 to the other peer without local CD / note locks.</summary>
+        public static void RaiseRemoteQuest(QuestSlot slot = QuestSlot.InventoryAll)
+        {
+            QuestRequested?.Invoke(new QuestRequestPayload(slot, Time.unscaledTime));
+        }
+
         private void RefreshHud()
         {
             if (_status == null)

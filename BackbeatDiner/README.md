@@ -36,7 +36,7 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 | **参加 localhost** / **J** | NGO Client → 同シーン（ホスト起動後） |
 | **オフライン裏 / 表** | ネットなしで従来どおり縦スライス開始 |
 
-最小同期: `DaySessionNetSync` が **売上スコア** と **チャート index** を NetworkVariable で共有（`Assets/_Project/Scripts/Net/`）。
+同期（KG-53）: `DaySessionNetSync` が **ホスト権威のビート位相**（ServerTime→DSP）、**チャート/間隙**、**仕込み・売上**、および **裏ヒット / 配膳 / C1·C2·C3** を RPC で共有（`Assets/_Project/Scripts/Net/`）。クライアントはセットリストを自律開始せずホストにロック。
 
 シーン: `Assets/_Project/Scenes/TitleMenu.unity`（Build Settings **先頭**）  
 再生成: **BACKBEAT DINER → Build Title Menu Scene**（`TitleMenuController` / `TitleMenuSceneBuilder`）。
@@ -126,7 +126,7 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 3. **ビート送信プロト**（着手済み）: KG-3 C3 **BeatLexicon**（B1..F4 静的定義、8s／同一20s CD、日本語パッド、配膳中ロック）。
 4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — **役ごと全画面**（2デバイス）、裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`、結果オーバーレイ。
 5. **タイトル → 役選択**（着手済み）: `TitleMenu` → **裏で始める / 表で始める**（1/2）で縦スライス開始。
-6. **ネットワーク**（スキャフォールド済み）: TitleMenu **ホスト作成 / 参加 localhost** → 役ごと全画面。`DaySessionNetSync` で score / chart index。続きは裏 SoT・ビート同期。**Multiplayer Play Mode** で仮想2クライアント検証可。
+6. **ネットワーク**（ビート/入力同期）: TitleMenu **ホスト作成 / 参加 localhost** → 役ごと全画面。`DaySessionNetSync` で beat phase + prep/sales + C1/C2/C3/hits。検証: 2 Editor または **Multiplayer Play Mode**（A=裏ホスト、B=表参加）。オフライン開始と **F8** は従来どおり。
 
 詳細マイルストーンは Cursor Project Context の **`docs/unity-production-plan.md`** を正本とします。リポジトリ内要約は `Docs/DESIGN_LINKS.md` を参照。
 

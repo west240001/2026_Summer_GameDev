@@ -132,7 +132,7 @@ namespace BackbeatDiner.Net
             var netObj = instance.GetComponent<NetworkObject>();
             SetGlobalObjectIdHash(netObj, NetSessionConfig.DaySessionSyncPrefabHash);
             netObj.Spawn(destroyWithScene: false);
-            Debug.Log("[Netcode] DaySessionNetSync spawned (salesScore / chartIndex).");
+            Debug.Log("[Netcode] DaySessionNetSync spawned (beat phase + role input sync).");
             return instance.GetComponent<DaySessionNetSync>();
         }
 

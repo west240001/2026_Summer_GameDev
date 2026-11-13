@@ -142,6 +142,23 @@ namespace BackbeatDiner.Rhythm
                 $"first beat dsp={_nextBeatDspTime:F3}");
         }
 
+        /// <summary>
+        /// Lock this clock to an absolute local DSP song start (and optional beat phase).
+        /// Used by Netcode clients mapping host <c>ServerTime</c> → local <see cref="AudioSettings.dspTime"/>.
+        /// </summary>
+        public void AlignToStartDsp(double startDspTime, int startingBeatIndex = 0)
+        {
+            EnsureAudioSources();
+            _startDspTime = startDspTime;
+            _beatIndex = Math.Max(0, startingBeatIndex);
+            _nextBeatDspTime = _startDspTime + _beatIndex * SecondsPerBeat;
+            _running = true;
+            ScheduleSongAligned();
+            Debug.Log(
+                $"[RhythmClock] Aligned startDsp={_startDspTime:F3} beat={_beatIndex} bpm={bpm} " +
+                $"nextBeat={_nextBeatDspTime:F3}");
+        }
+
         public void StopClock()
         {
             _running = false;
@@ -192,6 +209,37 @@ namespace BackbeatDiner.Rhythm
             songSource.clip = _songClip;
             songSource.volume = 0.85f;
             songSource.PlayScheduled(_startDspTime);
+        }
+
+        private void ScheduleSongAligned()
+        {
+            if (songSource == null || _songClip == null)
+            {
+                return;
+            }
+
+            songSource.Stop();
+            songSource.clip = _songClip;
+            songSource.volume = 0.85f;
+
+            var now = AudioSettings.dspTime;
+            var elapsed = now - _startDspTime;
+            if (elapsed < -0.02)
+            {
+                songSource.time = 0f;
+                songSource.PlayScheduled(_startDspTime);
+                return;
+            }
+
+            var clipLen = _songClip.length;
+            if (clipLen > 0.01f && elapsed >= clipLen)
+            {
+                songSource.clip = null;
+                return;
+            }
+
+            songSource.time = clipLen > 0.01f ? Mathf.Clamp((float)elapsed, 0f, clipLen - 0.01f) : 0f;
+            songSource.Play();
         }
 
         private void StopSong()

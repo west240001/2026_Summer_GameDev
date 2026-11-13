@@ -49,7 +49,11 @@ namespace BackbeatDiner.Front
             set => localTwoPlayerSplit = value;
         }
 
-        public event Action<HitJudgement, float> OnServeResolved;
+        /// <summary>Args: judgement, tip multiplier, patience ratio.</summary>
+        public event Action<HitJudgement, float, float> OnServeResolved;
+
+        /// <summary>Args: patience ratio when S1 window opens (Netcode relay).</summary>
+        public event Action<float> OnServeOpened;
 
         public void Configure(
             RhythmClock rhythmClock,
@@ -139,6 +143,7 @@ namespace BackbeatDiner.Front
             SetHud($"配膳リズム — {serveKeys} で拍合わせ（{barCount}小節）", FrontHudController.Gold);
             SetMeter(1f, FrontHudController.Gold);
             Debug.Log($"[ServeRhythmWindow] Open bars={barCount} deadlineDsp={_deadlineDsp:F3} patience={_patienceRatio:0.00}");
+            OnServeOpened?.Invoke(_patienceRatio);
             return true;
         }
 
@@ -265,7 +270,7 @@ namespace BackbeatDiner.Front
                 judgement == HitJudgement.Miss ? 0.15f : judgement == HitJudgement.Perfect ? 1f : 0.7f,
                 judgement == HitJudgement.Miss ? FrontHudController.Gold : FrontHudController.Teal);
             Debug.Log($"[ServeRhythmWindow] Close {judgement} tipMult={tipMult:0.##} patience={_patienceRatio:0.00}");
-            OnServeResolved?.Invoke(judgement, tipMult);
+            OnServeResolved?.Invoke(judgement, tipMult, _patienceRatio);
         }
 
         private void RefreshProgressHud(double now)

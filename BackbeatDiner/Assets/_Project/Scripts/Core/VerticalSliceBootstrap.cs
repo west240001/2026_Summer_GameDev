@@ -16,7 +16,7 @@ namespace BackbeatDiner.Core
     /// Vertical slice — single-role fullscreen for two devices (one screen each).
     /// Back: kitchen + back HUD. Front: diner + front HUD.
     /// Shared <see cref="DaySessionState"/> / setlist always runs (host logic on this scene).
-    /// When NGO Host/Client: <see cref="DaySessionNetSync"/> mirrors salesScore + chartIndex.
+    /// When NGO Host/Client: <see cref="DaySessionNetSync"/> mirrors beat phase + role inputs.
     /// Solo: F8 toggles role view.
     /// </summary>
     public sealed class VerticalSliceBootstrap : MonoBehaviour
@@ -182,16 +182,33 @@ namespace BackbeatDiner.Core
             ApplyRolePresentation();
             _sessionStarted = true;
 
+            // NGO client: do not start the local setlist/clock — host publishes beat phase + chart.
+            var netClientFollower = IsNetcodeClientFollower();
+
             DaySetlistRunner runner = null;
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
             {
                 runner = systems.AddComponent<DaySetlistRunner>();
                 runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel, gapCoop);
-                runner.StartSetlist(0.35);
-                Debug.Log(
-                    $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
-                    $"setlist={setlist.name} charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; shared DaySessionState; F8 toggles role.");
+                if (netClientFollower)
+                {
+                    runner.SetNetworkFollower(true);
+                    session.SetNetworkFollower(true);
+                    session.Begin();
+                    session.SetEndSessionOnChartComplete(false);
+                    session.ApplySetlistBudget(setlist);
+                    Debug.Log(
+                        $"[BACKBEAT DINER] VerticalSlicePrototype ready — CLIENT follower; " +
+                        $"role={VerticalSliceRoleSelection.DisplayName}; waiting host beat/chart sync; F8 toggles view.");
+                }
+                else
+                {
+                    runner.StartSetlist(0.35);
+                    Debug.Log(
+                        $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
+                        $"setlist={setlist.name} charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; shared DaySessionState; F8 toggles role.");
+                }
             }
             else
             {
@@ -203,17 +220,43 @@ namespace BackbeatDiner.Core
                 }
 
                 session.Begin();
-                clock.StartClock(0.35);
+                if (netClientFollower)
+                {
+                    session.SetNetworkFollower(true);
+                }
+                else
+                {
+                    clock.StartClock(0.35);
+                }
+
                 var chartLabel = chart != null ? chart.DisplayName : "(fallback every-beat)";
                 Debug.Log(
                     $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
-                    $"chart={chartLabel}; shared DaySessionState; F8 toggles role.");
+                    $"chart={chartLabel}; shared DaySessionState; F8 toggles role" +
+                    (netClientFollower ? "; CLIENT follower (clock from host)." : "."));
             }
 
-            TryBindNetSessionSync(session, runner);
+            TryBindNetSessionSync(session, runner, clock, hitInput, serveRhythm, judgement);
         }
 
-        private void TryBindNetSessionSync(DaySessionState session, DaySetlistRunner runner)
+        private static bool IsNetcodeClientFollower()
+        {
+            if (!NetSessionConfig.IsNetworked)
+            {
+                return false;
+            }
+
+            var nm = NetworkManager.Singleton;
+            return nm != null && nm.IsListening && nm.IsClient && !nm.IsServer;
+        }
+
+        private void TryBindNetSessionSync(
+            DaySessionState session,
+            DaySetlistRunner runner,
+            RhythmClock clock,
+            HitInput hitInput,
+            ServeRhythmWindow serveRhythm,
+            Text judgementLabel)
         {
             var nm = NetworkManager.Singleton;
             if (nm == null || !nm.IsListening)
@@ -230,23 +273,32 @@ namespace BackbeatDiner.Core
             if (nm.IsServer)
             {
                 var sync = NetcodeSessionBootstrap.SpawnSyncOnServerIfNeeded();
-                sync?.BindLocalSources(session, runner, status);
+                sync?.BindLocalSources(session, runner, clock, hitInput, serveRhythm, status, judgementLabel);
             }
             else if (DaySessionNetSync.Instance != null)
             {
-                DaySessionNetSync.Instance.BindLocalSources(session, runner, status);
+                DaySessionNetSync.Instance.BindLocalSources(
+                    session, runner, clock, hitInput, serveRhythm, status, judgementLabel);
             }
             else
             {
-                StartCoroutine(WaitForClientNetSync(session, runner, status));
+                StartCoroutine(WaitForClientNetSync(
+                    session, runner, clock, hitInput, serveRhythm, status, judgementLabel));
             }
 
             Debug.Log(
                 $"[Netcode] VerticalSlice bound — IsHost={nm.IsHost} IsClient={nm.IsClient} " +
-                $"role={VerticalSliceRoleSelection.DisplayName} fullscreen");
+                $"role={VerticalSliceRoleSelection.DisplayName} fullscreen (beat+input sync)");
         }
 
-        private IEnumerator WaitForClientNetSync(DaySessionState session, DaySetlistRunner runner, Text status)
+        private IEnumerator WaitForClientNetSync(
+            DaySessionState session,
+            DaySetlistRunner runner,
+            RhythmClock clock,
+            HitInput hitInput,
+            ServeRhythmWindow serveRhythm,
+            Text status,
+            Text judgementLabel)
         {
             var timeout = 5f;
             while (timeout > 0f && DaySessionNetSync.Instance == null)
@@ -255,7 +307,8 @@ namespace BackbeatDiner.Core
                 yield return null;
             }
 
-            DaySessionNetSync.Instance?.BindLocalSources(session, runner, status);
+            DaySessionNetSync.Instance?.BindLocalSources(
+                session, runner, clock, hitInput, serveRhythm, status, judgementLabel);
         }
 
         private Text EnsureNetStatusLabel()

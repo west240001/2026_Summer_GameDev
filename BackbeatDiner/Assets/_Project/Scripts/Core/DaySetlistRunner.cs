@@ -26,6 +26,7 @@ namespace BackbeatDiner.Core
         private int _index;
         private bool _inGap;
         private bool _started;
+        private bool _networkFollower;
         private Coroutine _gapRoutine;
 
         public SetlistDefinition Setlist => setlist;
@@ -33,6 +34,14 @@ namespace BackbeatDiner.Core
         public int CurrentIndex => _index;
 
         public bool IsInGap => _inGap;
+
+        /// <summary>When true, chart completion / gaps are driven only by DaySessionNetSync.</summary>
+        public bool IsNetworkFollower => _networkFollower;
+
+        public void SetNetworkFollower(bool follower)
+        {
+            _networkFollower = follower;
+        }
 
         public void Configure(
             SetlistDefinition definition,
@@ -90,6 +99,82 @@ namespace BackbeatDiner.Core
             BeginCurrentChart(startDelaySeconds);
         }
 
+        /// <summary>
+        /// Netcode client: load chart / gap UI from host index without owning the clock start.
+        /// Host still runs <see cref="StartSetlist"/>; client aligns DSP via DaySessionNetSync.
+        /// </summary>
+        public void ApplyNetworkChartIndex(int index, bool inGap)
+        {
+            if (setlist == null || setlist.Charts.Length == 0)
+            {
+                return;
+            }
+
+            if (index < 0 || index >= setlist.Charts.Length || setlist.Charts[index] == null)
+            {
+                Debug.LogWarning($"[DaySetlistRunner] ApplyNetworkChartIndex invalid index={index}");
+                return;
+            }
+
+            if (_gapRoutine != null)
+            {
+                StopCoroutine(_gapRoutine);
+                _gapRoutine = null;
+            }
+
+            if (!_started)
+            {
+                _started = true;
+                _session?.Begin();
+                _session?.SetEndSessionOnChartComplete(false);
+                _session?.ApplySetlistBudget(setlist);
+            }
+
+            _index = index;
+            _inGap = inGap;
+            var chart = setlist.Charts[index];
+
+            if (inGap)
+            {
+                _coopWindow?.EndGap();
+                _clock?.StopClock();
+                if (_hitInput != null)
+                {
+                    _hitInput.InputEnabled = false;
+                }
+
+                _highway?.ClearActiveNotes();
+                RefreshChartHud(chart, inGap: true);
+                var gap = setlist.GapSeconds;
+                _coopWindow?.BeginGap(gap, chart != null ? chart.DisplayName : null);
+                return;
+            }
+
+            _coopWindow?.EndGap();
+            RefreshChartHud(chart, inGap: false);
+
+            if (_clock != null)
+            {
+                _clock.StopClock();
+                _clock.ApplyChart(chart);
+            }
+
+            _session?.ApplyChart(chart);
+
+            if (_highway != null)
+            {
+                _highway.ClearActiveNotes();
+                _highway.LoadChart(chart);
+            }
+
+            if (_hitInput != null)
+            {
+                _hitInput.InputEnabled = true;
+            }
+
+            Debug.Log($"[DaySetlistRunner] Network chart apply index={index} {chart.DisplayName}");
+        }
+
         private void BeginCurrentChart(double startDelaySeconds)
         {
             var chart = setlist.Charts[_index];
@@ -124,7 +209,7 @@ namespace BackbeatDiner.Core
 
         private void HandleChartCompleted()
         {
-            if (!_started || _inGap || _session == null || _session.IsEnded)
+            if (_networkFollower || !_started || _inGap || _session == null || _session.IsEnded)
             {
                 return;
             }

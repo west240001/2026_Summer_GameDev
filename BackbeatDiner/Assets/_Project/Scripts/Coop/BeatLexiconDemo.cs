@@ -189,6 +189,19 @@ namespace BackbeatDiner.Coop
             return true;
         }
 
+        /// <summary>Netcode: raise C3 motif events on the receiving peer (pulse / quest answer).</summary>
+        public static void RaiseRemoteMotif(BeatRole beatRole, int padIndex)
+        {
+            if (padIndex < 0 || padIndex > 3)
+            {
+                return;
+            }
+
+            var def = BeatLexicon.GetPad(beatRole, padIndex);
+            MotifSent?.Invoke(padIndex, def.JapaneseLabel);
+            BeatSent?.Invoke(def);
+        }
+
         public float RemainingMotifCooldown(BeatId id)
         {
             return Mathf.Max(0f, _nextMotifReadyTime[(int)id] - Time.unscaledTime);
