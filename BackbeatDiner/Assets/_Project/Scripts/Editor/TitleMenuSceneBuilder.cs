@@ -7,13 +7,14 @@ using UnityEngine;
 namespace BackbeatDiner.Editor
 {
     /// <summary>
-    /// Builds TitleMenu scene (logo / catchcopy / 営業開始) and puts it first in Build Settings.
+    /// Builds TitleMenu scene (art backdrop / logo / catchcopy / 営業開始) and puts it first in Build Settings.
     /// Menu: BACKBEAT DINER / Build Title Menu Scene
     /// Batchmode: -executeMethod BackbeatDiner.Editor.TitleMenuSceneBuilder.BuildFromCommandLine
     /// </summary>
     public static class TitleMenuSceneBuilder
     {
         private const string ScenePath = "Assets/_Project/Scenes/TitleMenu.unity";
+        private const string TitleBackgroundPath = "Assets/_Project/Art/UI/TitleBackground.jpg";
 
         [MenuItem("BACKBEAT DINER/Build Title Menu Scene")]
         public static void BuildFromMenu()
@@ -22,7 +23,7 @@ namespace BackbeatDiner.Editor
             EditorUtility.DisplayDialog(
                 "BACKBEAT DINER",
                 "TitleMenu.unity を作成しました。\n" +
-                "ロゴ BACKBEAT DINER / キャッチコピー / 営業開始 → VerticalSlicePrototype。\n" +
+                "背景アート + BACKBEAT DINER / キャッチコピー / 営業開始 → VerticalSlicePrototype。\n" +
                 "Build Settings 先頭に TitleMenu を登録済みです。",
                 "OK");
         }
@@ -45,6 +46,9 @@ namespace BackbeatDiner.Editor
         private static void BuildScene(bool setInBuildSettings)
         {
             Directory.CreateDirectory("Assets/_Project/Scenes");
+            Directory.CreateDirectory("Assets/_Project/Art/UI");
+
+            EnsureTitleBackgroundImportSettings();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
@@ -72,10 +76,22 @@ namespace BackbeatDiner.Editor
                 }
             }
 
+            var background = AssetDatabase.LoadAssetAtPath<Sprite>(TitleBackgroundPath);
+            if (background == null)
+            {
+                Debug.LogWarning("[TitleMenuSceneBuilder] Missing sprite at " + TitleBackgroundPath);
+            }
+
             var root = new GameObject("TitleMenuRoot");
             var controller = root.AddComponent<TitleMenuController>();
             var so = new SerializedObject(controller);
             so.FindProperty("playSceneName").stringValue = "VerticalSlicePrototype";
+            var bgProp = so.FindProperty("titleBackground");
+            if (bgProp != null && background != null)
+            {
+                bgProp.objectReferenceValue = background;
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -86,7 +102,47 @@ namespace BackbeatDiner.Editor
                 ApplyTitleFirstBuildSettings();
             }
 
-            Debug.Log($"[TitleMenuSceneBuilder] Saved {ScenePath}");
+            Debug.Log($"[TitleMenuSceneBuilder] Saved {ScenePath} (bg={(background != null ? "ok" : "missing")})");
+        }
+
+        private static void EnsureTitleBackgroundImportSettings()
+        {
+            if (!File.Exists(TitleBackgroundPath))
+            {
+                Debug.LogWarning("[TitleMenuSceneBuilder] TitleBackground.jpg not found at " + TitleBackgroundPath);
+                return;
+            }
+
+            AssetDatabase.ImportAsset(TitleBackgroundPath, ImportAssetOptions.ForceUpdate);
+            var importer = AssetImporter.GetAtPath(TitleBackgroundPath) as TextureImporter;
+            if (importer == null)
+            {
+                return;
+            }
+
+            var dirty = false;
+            if (importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                dirty = true;
+            }
+
+            if (importer.spriteImportMode != SpriteImportMode.Single)
+            {
+                importer.spriteImportMode = SpriteImportMode.Single;
+                dirty = true;
+            }
+
+            if (importer.mipmapEnabled)
+            {
+                importer.mipmapEnabled = false;
+                dirty = true;
+            }
+
+            if (dirty)
+            {
+                importer.SaveAndReimport();
+            }
         }
 
         /// <summary>TitleMenu first, then vertical slice and existing prototypes.</summary>
