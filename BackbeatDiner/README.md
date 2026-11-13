@@ -76,7 +76,41 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 
 ### スクリーンショット（Play 時の見え方）
 
-左右分割のゲーム画面。**左半分**は暗いネイビーのキッチン／リズムステーション：市松フロア、カウンター、A·S·D·F パッド、ゴールドのヒットラインへ向かうノートハイウェイ、ペンダントランプのソフト点光。**右半分**はダイナーフロア：ブース席・テーブル・キッチンパス壁のパス窓、サービスカウンター、客キュー。画面中央上に **BACKBEAT DINER**／「バックビート・ダイナー」、左パネルに判定・コンボ・BPM、右パネルに仕込み／提供と配膳メーター、下部にローカル2Pヘルプ帯。フォグと暖色キーライト＋ティール寄りのフィルでローポリ空間に空気感を出す。
+左右分割のゲーム画面。**左半分**は暗いネイビーのキッチン／リズムステーション：市松フロア、カウンター、A·S·D·F パッド、ゴールドのヒットラインへ向かうノートハイウェイ、ペンダントランプのソフト点光。**右半分**はダイナーフロア：ブース席・テーブル・キッチンパス壁のパス窓、サービスカウンター、客キュー。画面中央上に **BACKBEAT DINER**／「バックビート・ダイナー」、左に注文票パネル、右にサービス盤＋在庫スロット＋大きな配膳メーター、下部にローカル2Pヘルプ帯。フォグと暖色キーライト＋ティール寄りのフィルでローポリ空間に空気感を出す。
+
+### Vertical Slice HUD マップ（Cooking Simulator 風）
+
+共有スタイルは `CookingSimHud`（半透明ダークパネル + 白／ゴールド文字 + 太いラベル付きゲージ）。左右をはっきり分け、小さく散らかしたオーバーレイを避ける。
+
+```
+┌─ 左 裏（注文票） ──────────┬SPLIT┬─ 右 表（サービス盤） ──────────┐
+│ 【注文票】裏・リズム        │     │ 【サービス】表・ダイナー        │
+│ 判定 / コンボ / BPM         │ 中央│ 仕込み・提供 + ラベル付きゲージ │
+│ C1 クエスト提示（Q）        │ セッション│ クック/配膳/ビート/C2 提示 │
+│ 監視 PiP（金枠・BLIND）     │ 進行│ 配膳リズムメーター（大）         │
+│ ビートパッド B1–B4（大）    │     │ 在庫スロット A–E（大）           │
+│ C1 CD パネル                │     │ ビートパッド F1–F4（大）         │
+│                             │     │ C2 スナップ送信パネル            │
+└─────────────────────────────┴─────┴────────────────────────────────┘
+│ 下部ヘルプ帯（ローカル2P 操作まとめ）                              │
+│ 中央オーバーレイ: チャート間隙バナー / 結果カード / タイトルへ      │
+```
+
+| 領域 | 主な UI | スクリプト |
+|------|---------|------------|
+| 左・注文票 | 判定・コンボ・BPM・C1 提示 | `VerticalSliceBootstrap.BuildHud` |
+| 左・監視 | 表フロア PiP + BLIND | `SurveillanceThumbnail` |
+| 左・パッド | A/S/D/F = Beat-B* | `BeatLexiconDemo` (Back) |
+| 左・C1 | Q クエスト CD | `QuestRequestController` |
+| 左・Snap-In | C2 受信パネル | `SnapshotReceivePanel` |
+| 中央 | ブランド / セッション進行 / 間隙バナー | `VerticalSliceBootstrap` / `ChartGapCoopWindow` |
+| 右・サービス | 仕込み・提供・配膳メーター | `DaySessionState` / `ServeRhythmWindow` |
+| 右・在庫 | カテゴリ A–E スロット | `InventoryBar` |
+| 右・パッド | ←↓→↑ = Beat-F* | `BeatLexiconDemo` (Front) |
+| 右・C2 | Tab 長押し送信 | `SnapshotSendController` |
+| 右・トースト | C1 受信トースト | `QuestReceiveToast` |
+| 結果 | 営業終了カード | `ResultOverlayController` |
+| タイトル | 営業開始 CTA | `TitleMenuController` |
 
 シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
 再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow` / `ChartGapCoopWindow`）。

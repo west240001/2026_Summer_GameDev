@@ -1,4 +1,4 @@
-using BackbeatDiner.Front;
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,8 +10,8 @@ namespace BackbeatDiner.Coop
     /// </summary>
     public sealed class QuestReceiveToast : MonoBehaviour
     {
-        private static readonly Color Gold = FrontHudController.Gold;
-        private static readonly Color Teal = FrontHudController.Teal;
+        private static readonly Color Gold = CookingSimHud.Gold;
+        private static readonly Color Teal = CookingSimHud.Teal;
 
         [SerializeField] private float toastSeconds = 4.5f;
         [SerializeField] private AudioSource source;
@@ -232,17 +232,20 @@ namespace BackbeatDiner.Coop
 
             _group = _root.GetComponent<CanvasGroup>() ?? _root.AddComponent<CanvasGroup>();
             var bg = _root.GetComponent<Image>() ?? _root.AddComponent<Image>();
-            bg.color = new Color(0.04f, 0.08f, 0.12f, 0.88f);
+            bg.color = CookingSimHud.PanelBg;
             var rt = bg.rectTransform;
             rt.anchorMin = new Vector2(1f, 0.5f);
             rt.anchorMax = new Vector2(1f, 0.5f);
             rt.pivot = new Vector2(1f, 0.5f);
-            rt.anchoredPosition = new Vector2(-18f, 40f);
-            rt.sizeDelta = new Vector2(380f, 72f);
+            rt.anchoredPosition = new Vector2(-24f, 80f);
+            rt.sizeDelta = new Vector2(480f, 110f);
+            var outline = _root.GetComponent<Outline>() ?? _root.AddComponent<Outline>();
+            outline.effectColor = CookingSimHud.BorderGold;
+            outline.effectDistance = new Vector2(3f, -3f);
 
             _icon = EnsureIcon(_root.transform);
-            _toast = EnsureLine(_root.transform, "QuestToast", "クエスト要求", 18, Gold, new Vector2(28f, 12f));
-            _hint = EnsureLine(_root.transform, "QuestHint", "応答: Tab=C2 / ←=F1", 14, Teal, new Vector2(28f, -14f));
+            _toast = EnsureLine(_root.transform, "QuestToast", "クエスト要求", CookingSimHud.FontHeader, Gold, new Vector2(40f, 22f));
+            _hint = EnsureLine(_root.transform, "QuestHint", "応答: Tab長押し=C2 ／ ←=Beat-F1 ビジー", CookingSimHud.FontRow, CookingSimHud.Cream, new Vector2(40f, -18f));
         }
 
         private static Image EnsureIcon(Transform parent)
@@ -254,20 +257,19 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject("QuestIcon");
                 go.transform.SetParent(parent, false);
                 img = go.AddComponent<Image>();
-                var rt = img.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0.5f);
-                rt.anchorMax = new Vector2(0f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = new Vector2(28f, 0f);
-                rt.sizeDelta = new Vector2(28f, 28f);
             }
             else
             {
-                img = t.GetComponent<Image>();
+                img = t.GetComponent<Image>() ?? t.gameObject.AddComponent<Image>();
             }
 
-            // Procedural diamond badge (UI Image color only — silhouette stand-in).
-            img.color = new Color(Gold.r, Gold.g, Gold.b, 0.9f);
+            var rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(36f, 0f);
+            rt.sizeDelta = new Vector2(40f, 40f);
+            img.color = new Color(Gold.r, Gold.g, Gold.b, 0.95f);
             img.raycastTarget = false;
             return img;
         }
@@ -281,24 +283,25 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(name);
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.alignment = TextAnchor.MiddleLeft;
-                var rt = label.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0.5f);
-                rt.anchorMax = new Vector2(1f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(52f, -14f);
-                rt.offsetMax = new Vector2(-12f, 14f);
             }
             else
             {
-                label = t.GetComponent<Text>();
+                label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
+            label.font = CookingSimHud.UiFont();
+            label.alignment = TextAnchor.MiddleLeft;
+            label.fontStyle = FontStyle.Bold;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(64f, -16f);
+            rt.offsetMax = new Vector2(-14f, 16f);
             label.fontSize = size;
             label.color = color;
             label.text = text;
+            label.raycastTarget = false;
             label.rectTransform.anchoredPosition = pos;
             return label;
         }

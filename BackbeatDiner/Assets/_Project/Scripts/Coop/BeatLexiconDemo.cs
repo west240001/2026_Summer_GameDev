@@ -321,100 +321,147 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(rootName);
                 go.transform.SetParent(canvasGo.transform, false);
                 rootRt = go.AddComponent<RectTransform>();
-                if (role == BeatRole.Back)
-                {
-                    rootRt.anchorMin = new Vector2(0f, 0f);
-                    rootRt.anchorMax = new Vector2(0f, 0f);
-                    rootRt.pivot = new Vector2(0f, 0f);
-                    rootRt.anchoredPosition = new Vector2(24f, 72f);
-                }
-                else
-                {
-                    rootRt.anchorMin = new Vector2(1f, 0f);
-                    rootRt.anchorMax = new Vector2(1f, 0f);
-                    rootRt.pivot = new Vector2(1f, 0f);
-                    rootRt.anchoredPosition = new Vector2(-24f, 72f);
-                }
-
-                rootRt.sizeDelta = new Vector2(460f, 132f);
             }
             else
             {
                 root.name = rootName;
-                rootRt = root.GetComponent<RectTransform>();
+                rootRt = root.GetComponent<RectTransform>() ?? root.gameObject.AddComponent<RectTransform>();
             }
 
-            // Soft chrome behind pads
-            if (rootRt.Find("PadChrome") == null)
+            // Large Cooking-Sim pad dock — left=Back, right=Front
+            if (role == BeatRole.Back)
+            {
+                rootRt.anchorMin = new Vector2(0f, 0f);
+                rootRt.anchorMax = new Vector2(0f, 0f);
+                rootRt.pivot = new Vector2(0f, 0f);
+                rootRt.anchoredPosition = new Vector2(20f, 88f);
+            }
+            else
+            {
+                rootRt.anchorMin = new Vector2(1f, 0f);
+                rootRt.anchorMax = new Vector2(1f, 0f);
+                rootRt.pivot = new Vector2(1f, 0f);
+                rootRt.anchoredPosition = new Vector2(-20f, 88f);
+            }
+
+            rootRt.sizeDelta = new Vector2(620f, 168f);
+
+            var chromeT = rootRt.Find("PadChrome");
+            Image chrome;
+            if (chromeT == null)
             {
                 var chromeGo = new GameObject("PadChrome");
                 chromeGo.transform.SetParent(rootRt, false);
                 chromeGo.transform.SetAsFirstSibling();
-                var chrome = chromeGo.AddComponent<Image>();
-                chrome.color = new Color(0.03f, 0.07f, 0.1f, 0.78f);
-                var crt = chrome.rectTransform;
-                crt.anchorMin = Vector2.zero;
-                crt.anchorMax = Vector2.one;
-                crt.offsetMin = new Vector2(-10f, -10f);
-                crt.offsetMax = new Vector2(10f, 10f);
+                chrome = chromeGo.AddComponent<Image>();
             }
+            else
+            {
+                chrome = chromeT.GetComponent<Image>() ?? chromeT.gameObject.AddComponent<Image>();
+                chromeT.SetAsFirstSibling();
+            }
+
+            chrome.color = CookingSimHud.PanelBg;
+            chrome.raycastTarget = false;
+            var crt = chrome.rectTransform;
+            crt.anchorMin = Vector2.zero;
+            crt.anchorMax = Vector2.one;
+            crt.offsetMin = new Vector2(-14f, -14f);
+            crt.offsetMax = new Vector2(14f, 28f);
+            var chromeOutline = chrome.gameObject.GetComponent<Outline>() ?? chrome.gameObject.AddComponent<Outline>();
+            chromeOutline.effectColor = CookingSimHud.BorderGold;
+            chromeOutline.effectDistance = new Vector2(2f, -2f);
+
+            var titleName = role == BeatRole.Back ? "PadTitle_Back" : "PadTitle_Front";
+            var title = rootRt.Find(titleName)?.GetComponent<Text>();
+            if (title == null)
+            {
+                var titleGo = new GameObject(titleName);
+                titleGo.transform.SetParent(rootRt, false);
+                title = titleGo.AddComponent<Text>();
+            }
+
+            title.font = CookingSimHud.UiFont();
+            title.fontSize = CookingSimHud.FontRow;
+            title.fontStyle = FontStyle.Bold;
+            title.color = CookingSimHud.Gold;
+            title.alignment = TextAnchor.UpperLeft;
+            title.text = role == BeatRole.Back ? "ビートパッド（裏 B1–B4）" : "ビートパッド（表 F1–F4）";
+            title.raycastTarget = false;
+            var trt = title.rectTransform;
+            trt.anchorMin = new Vector2(0f, 1f);
+            trt.anchorMax = new Vector2(1f, 1f);
+            trt.pivot = new Vector2(0.5f, 1f);
+            trt.anchoredPosition = new Vector2(0f, 22f);
+            trt.sizeDelta = new Vector2(-8f, 26f);
 
             _padLabels = new Text[4];
             _padBgs = new Image[4];
+            const float padW = 140f;
+            const float padH = 120f;
+            const float padGap = 12f;
             for (var i = 0; i < 4; i++)
             {
                 var name = $"Pad_{i + 1}";
                 var existing = rootRt.Find(name);
                 Image bg;
                 Text label;
+                Image frame;
                 if (existing == null)
                 {
                     var padGo = new GameObject(name);
                     padGo.transform.SetParent(rootRt, false);
-                    var frame = padGo.AddComponent<Image>();
-                    frame.color = new Color(FrontHudController.Gold.r, FrontHudController.Gold.g, FrontHudController.Gold.b, 0.55f);
-                    var rt = frame.rectTransform;
-                    rt.anchorMin = new Vector2(0f, 0.5f);
-                    rt.anchorMax = new Vector2(0f, 0.5f);
-                    rt.pivot = new Vector2(0f, 0.5f);
-                    rt.sizeDelta = new Vector2(104f, 88f);
-                    rt.anchoredPosition = new Vector2(8f + i * 112f, 0f);
+                    frame = padGo.AddComponent<Image>();
 
                     var insetGo = new GameObject("Inset");
                     insetGo.transform.SetParent(padGo.transform, false);
                     bg = insetGo.AddComponent<Image>();
-                    bg.color = new Color(0.05f, 0.12f, 0.12f, 0.95f);
-                    var irt = bg.rectTransform;
-                    irt.anchorMin = Vector2.zero;
-                    irt.anchorMax = Vector2.one;
-                    irt.offsetMin = new Vector2(2f, 2f);
-                    irt.offsetMax = new Vector2(-2f, -2f);
 
                     var labelGo = new GameObject("Label");
                     labelGo.transform.SetParent(padGo.transform, false);
                     label = labelGo.AddComponent<Text>();
-                    label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                                 ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                    label.fontSize = 13;
-                    label.alignment = TextAnchor.MiddleCenter;
-                    label.color = FrontHudController.Gold;
-                    label.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    label.verticalOverflow = VerticalWrapMode.Overflow;
-                    var lrt = label.rectTransform;
-                    lrt.anchorMin = Vector2.zero;
-                    lrt.anchorMax = Vector2.one;
-                    lrt.offsetMin = new Vector2(4f, 4f);
-                    lrt.offsetMax = new Vector2(-4f, -4f);
                 }
                 else
                 {
+                    frame = existing.GetComponent<Image>() ?? existing.gameObject.AddComponent<Image>();
                     bg = existing.Find("Inset")?.GetComponent<Image>() ?? existing.GetComponent<Image>();
                     label = existing.Find("Label")?.GetComponent<Text>();
                     if (label == null)
                     {
-                        continue;
+                        var labelGo = new GameObject("Label");
+                        labelGo.transform.SetParent(existing, false);
+                        label = labelGo.AddComponent<Text>();
                     }
                 }
+
+                frame.color = new Color(CookingSimHud.Gold.r, CookingSimHud.Gold.g, CookingSimHud.Gold.b, 0.7f);
+                var rt = frame.rectTransform;
+                rt.anchorMin = new Vector2(0f, 0.5f);
+                rt.anchorMax = new Vector2(0f, 0.5f);
+                rt.pivot = new Vector2(0f, 0.5f);
+                rt.sizeDelta = new Vector2(padW, padH);
+                rt.anchoredPosition = new Vector2(10f + i * (padW + padGap), -4f);
+
+                bg.color = new Color(0.06f, 0.1f, 0.12f, 0.96f);
+                var irt = bg.rectTransform;
+                irt.anchorMin = Vector2.zero;
+                irt.anchorMax = Vector2.one;
+                irt.offsetMin = new Vector2(3f, 3f);
+                irt.offsetMax = new Vector2(-3f, -3f);
+
+                label.font = CookingSimHud.UiFont();
+                label.fontSize = 18;
+                label.fontStyle = FontStyle.Bold;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.color = CookingSimHud.Gold;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+                label.raycastTarget = false;
+                var lrt = label.rectTransform;
+                lrt.anchorMin = Vector2.zero;
+                lrt.anchorMax = Vector2.one;
+                lrt.offsetMin = new Vector2(6f, 6f);
+                lrt.offsetMax = new Vector2(-6f, -6f);
 
                 _padBgs[i] = bg;
                 _padLabels[i] = label;
@@ -427,36 +474,36 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(statusName);
                 go.transform.SetParent(canvasGo.transform, false);
                 _statusLabel = go.AddComponent<Text>();
-                _statusLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                                    ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                _statusLabel.fontSize = 16;
-                _statusLabel.color = FrontHudController.Teal;
-                var rt = _statusLabel.rectTransform;
-                if (role == BeatRole.Back)
-                {
-                    _statusLabel.alignment = TextAnchor.MiddleLeft;
-                    rt.anchorMin = new Vector2(0f, 0f);
-                    rt.anchorMax = new Vector2(0f, 0f);
-                    rt.pivot = new Vector2(0f, 0f);
-                    rt.anchoredPosition = new Vector2(24f, 48f);
-                }
-                else
-                {
-                    _statusLabel.alignment = TextAnchor.MiddleRight;
-                    rt.anchorMin = new Vector2(1f, 0f);
-                    rt.anchorMax = new Vector2(1f, 0f);
-                    rt.pivot = new Vector2(1f, 0f);
-                    rt.anchoredPosition = new Vector2(-24f, 48f);
-                }
-
-                rt.sizeDelta = new Vector2(420f, 24f);
             }
             else
             {
                 status.name = statusName;
-                _statusLabel = status.GetComponent<Text>();
+                _statusLabel = status.GetComponent<Text>() ?? status.gameObject.AddComponent<Text>();
             }
 
+            _statusLabel.font = CookingSimHud.UiFont();
+            _statusLabel.fontSize = CookingSimHud.FontRow;
+            _statusLabel.fontStyle = FontStyle.Bold;
+            _statusLabel.color = CookingSimHud.Cream;
+            var srt = _statusLabel.rectTransform;
+            if (role == BeatRole.Back)
+            {
+                _statusLabel.alignment = TextAnchor.MiddleLeft;
+                srt.anchorMin = new Vector2(0f, 0f);
+                srt.anchorMax = new Vector2(0f, 0f);
+                srt.pivot = new Vector2(0f, 0f);
+                srt.anchoredPosition = new Vector2(24f, 58f);
+            }
+            else
+            {
+                _statusLabel.alignment = TextAnchor.MiddleRight;
+                srt.anchorMin = new Vector2(1f, 0f);
+                srt.anchorMax = new Vector2(1f, 0f);
+                srt.pivot = new Vector2(1f, 0f);
+                srt.anchoredPosition = new Vector2(-24f, 58f);
+            }
+
+            srt.sizeDelta = new Vector2(560f, 28f);
             RefreshPadUi();
         }
 
@@ -485,15 +532,15 @@ namespace BackbeatDiner.Coop
                             : !anyReady
                                 ? $"{RemainingAnyCooldown:0}s"
                                 : "OK";
-                    _padLabels[i].text = $"{key}\n{def.JapaneseLabel}\n{cdNote}";
-                    _padLabels[i].color = ready ? FrontHudController.Gold : new Color(0.55f, 0.55f, 0.5f);
+                    _padLabels[i].text = $"[{key}]\n{def.JapaneseLabel}\n{cdNote}";
+                    _padLabels[i].color = ready ? CookingSimHud.Gold : new Color(0.62f, 0.62f, 0.58f);
                 }
 
                 if (_padBgs[i] != null)
                 {
                     _padBgs[i].color = ready
-                        ? new Color(0.08f, 0.22f, 0.22f, 0.9f)
-                        : new Color(0.08f, 0.08f, 0.08f, 0.75f);
+                        ? new Color(0.1f, 0.28f, 0.26f, 0.95f)
+                        : new Color(0.08f, 0.08f, 0.09f, 0.88f);
                 }
             }
         }

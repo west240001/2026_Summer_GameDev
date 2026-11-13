@@ -1,3 +1,4 @@
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -89,7 +90,7 @@ namespace BackbeatDiner.Front
 
                 if (_labels != null && i < _labels.Length && _labels[i] != null)
                 {
-                    _labels[i].text = $"{CategoryNames[i % CategoryNames.Length]} {Mathf.RoundToInt(stock[i] * 100f)}%";
+                    _labels[i].text = $"{CategoryNames[i % CategoryNames.Length]}\n{Mathf.RoundToInt(stock[i] * 100f)}%";
                 }
             }
         }
@@ -110,8 +111,10 @@ namespace BackbeatDiner.Front
             _fills = new Image[stock.Length];
             _labels = new Text[stock.Length];
 
-            var width = 110f;
-            var gap = 12f;
+            // Cooking Sim inventory slots — large, labeled, high contrast
+            var width = 128f;
+            var height = 92f;
+            var gap = 10f;
             var total = stock.Length * width + (stock.Length - 1) * gap;
             var startX = -total * 0.5f + width * 0.5f;
 
@@ -120,11 +123,14 @@ namespace BackbeatDiner.Front
                 var cell = new GameObject($"Stock_{i}");
                 cell.transform.SetParent(rowRoot, false);
                 var cellRt = cell.AddComponent<RectTransform>();
-                cellRt.sizeDelta = new Vector2(width, 64f);
+                cellRt.sizeDelta = new Vector2(width, height);
                 cellRt.anchoredPosition = new Vector2(startX + i * (width + gap), 0f);
 
                 var bg = cell.AddComponent<Image>();
-                bg.color = new Color(0.04f, 0.1f, 0.1f, 0.85f);
+                bg.color = CookingSimHud.PanelBg;
+                var outline = cell.AddComponent<Outline>();
+                outline.effectColor = CookingSimHud.BorderGold;
+                outline.effectDistance = new Vector2(1.5f, -1.5f);
 
                 var fillGo = new GameObject("Fill");
                 fillGo.transform.SetParent(cell.transform, false);
@@ -133,28 +139,30 @@ namespace BackbeatDiner.Front
                 fill.fillMethod = Image.FillMethod.Vertical;
                 fill.fillOrigin = (int)Image.OriginVertical.Bottom;
                 fill.fillAmount = stock[i];
-                fill.color = stock[i] < 0.35f ? FrontHudController.Gold : FrontHudController.Teal;
+                fill.color = stock[i] < 0.35f ? CookingSimHud.Gold : CookingSimHud.Teal;
                 var frt = fill.rectTransform;
                 frt.anchorMin = Vector2.zero;
                 frt.anchorMax = Vector2.one;
-                frt.offsetMin = new Vector2(4f, 4f);
-                frt.offsetMax = new Vector2(-4f, -18f);
+                frt.offsetMin = new Vector2(5f, 26f);
+                frt.offsetMax = new Vector2(-5f, -5f);
                 _fills[i] = fill;
 
                 var labelGo = new GameObject("Label");
                 labelGo.transform.SetParent(cell.transform, false);
                 var label = labelGo.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.fontSize = 12;
+                label.font = CookingSimHud.UiFont();
+                label.fontSize = 15;
+                label.fontStyle = FontStyle.Bold;
                 label.alignment = TextAnchor.LowerCenter;
-                label.color = FrontHudController.Gold;
-                label.text = $"{CategoryNames[i % CategoryNames.Length]} {Mathf.RoundToInt(stock[i] * 100f)}%";
+                label.color = CookingSimHud.Cream;
+                label.text = $"{CategoryNames[i % CategoryNames.Length]}\n{Mathf.RoundToInt(stock[i] * 100f)}%";
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
                 var lrt = label.rectTransform;
                 lrt.anchorMin = new Vector2(0f, 0f);
                 lrt.anchorMax = new Vector2(1f, 0f);
                 lrt.pivot = new Vector2(0.5f, 0f);
-                lrt.sizeDelta = new Vector2(0f, 18f);
+                lrt.sizeDelta = new Vector2(0f, 28f);
                 lrt.anchoredPosition = Vector2.zero;
                 _labels[i] = label;
             }

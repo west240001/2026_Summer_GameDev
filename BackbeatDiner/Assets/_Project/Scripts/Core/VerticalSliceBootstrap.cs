@@ -665,109 +665,125 @@ namespace BackbeatDiner.Core
             out Button titleButton,
             out Text chartNameLabel)
         {
-            var canvasGo = GameObject.Find("VerticalSliceHUD");
-            if (canvasGo == null)
-            {
-                canvasGo = new GameObject("VerticalSliceHUD");
-                var canvas = canvasGo.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 20;
-                var scaler = canvasGo.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(1920f, 1080f);
-                canvasGo.AddComponent<GraphicRaycaster>();
-            }
+            var canvas = CookingSimHud.EnsureOverlayCanvas("VerticalSliceHUD", 20);
+            var root = canvas.transform;
 
-            // Center brand logo
-            var logo = EnsureLabel(canvasGo.transform, "BrandLogo", "BACKBEAT DINER", new Vector2(0f, -10f),
-                TextAnchor.UpperCenter, 30, Gold);
+            // Center brand (compact — does not compete with order tickets)
+            var logo = CookingSimHud.EnsureLabel(root, "BrandLogo", "BACKBEAT DINER", new Vector2(0f, -8f),
+                TextAnchor.UpperCenter, 34, CookingSimHud.Gold, FontStyle.Bold, 720f, 42f);
             logo.fontStyle = FontStyle.Bold;
-            logo.rectTransform.sizeDelta = new Vector2(640f, 40f);
-            EnsureLabel(canvasGo.transform, "BrandSub", "バックビート・ダイナー", new Vector2(0f, -42f),
-                TextAnchor.UpperCenter, 14, Teal).rectTransform.sizeDelta = new Vector2(480f, 24f);
+            CookingSimHud.EnsureLabel(root, "BrandSub", "バックビート・ダイナー", new Vector2(0f, -46f),
+                TextAnchor.UpperCenter, CookingSimHud.FontHint, CookingSimHud.Teal, FontStyle.Normal, 480f, 26f);
+            chartNameLabel = CookingSimHud.EnsureLabel(root, "ChartNameLabel", "チャート名: —",
+                new Vector2(0f, -72f), TextAnchor.UpperCenter, CookingSimHud.FontRow, CookingSimHud.Cream,
+                FontStyle.Normal, 560f, 28f);
 
-            chartNameLabel = EnsureLabel(canvasGo.transform, "ChartNameLabel", "チャート名: —",
-                new Vector2(0f, -62f), TextAnchor.UpperCenter, 18, Gold);
-            chartNameLabel.rectTransform.sizeDelta = new Vector2(560f, 28f);
+            // Clear left / right split
+            CookingSimHud.EnsurePanel(root, "SplitDivider", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 0f),
+                new Color(CookingSimHud.Gold.r, CookingSimHud.Gold.g, CookingSimHud.Gold.b, 0.8f), goldBorder: false);
 
-            EnsurePanel(canvasGo.transform, "SplitDivider", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(5f, 0f), new Color(Gold.r, Gold.g, Gold.b, 0.65f));
+            // LEFT = Back order ticket
+            CookingSimHud.EnsurePanel(root, "BackPanel", new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(0f, 1f), new Vector2(18f, -88f), new Vector2(460f, 280f), CookingSimHud.PanelBg);
+            CookingSimHud.EnsureLabel(root, "BackTitle", "【注文票】裏 · リズムステーション",
+                new Vector2(34f, -98f), TextAnchor.UpperLeft, CookingSimHud.FontHeader, CookingSimHud.Gold,
+                FontStyle.Bold, 440f, 34f);
+            judgement = CookingSimHud.EnsureLabel(root, "JudgementLabel", "判定: —",
+                new Vector2(34f, -140f), TextAnchor.UpperLeft, 30, CookingSimHud.White, FontStyle.Bold, 420f, 38f);
+            combo = CookingSimHud.EnsureLabel(root, "ComboLabel", "コンボ: 0",
+                new Vector2(34f, -182f), TextAnchor.UpperLeft, CookingSimHud.FontBody, CookingSimHud.Gold,
+                FontStyle.Normal, 420f, 32f);
+            bpmLabel = CookingSimHud.EnsureLabel(root, "BpmLabel", "BPM: 120",
+                new Vector2(34f, -218f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.Cream,
+                FontStyle.Normal, 420f, 30f);
+            CookingSimHud.EnsureLabel(root, "BackControlsHint", LocalTwoPlayerBindings.HudBackHint,
+                new Vector2(34f, -256f), TextAnchor.UpperLeft, CookingSimHud.FontHint, CookingSimHud.Cream,
+                FontStyle.Normal, 430f, 56f);
+            CookingSimHud.EnsureLabel(root, "BackQuestPrompt", "◆ C1 クエスト  Qキー",
+                new Vector2(34f, -318f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 420f, 32f);
 
-            // Left / right chrome panels
-            EnsurePanel(canvasGo.transform, "BackPanel", new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(0f, 1f), new Vector2(16f, -70f), new Vector2(430f, 210f), new Color(0.03f, 0.07f, 0.1f, 0.72f));
-            EnsurePanel(canvasGo.transform, "FrontPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(1f, 1f), new Vector2(-16f, -70f), new Vector2(450f, 250f), new Color(0.03f, 0.07f, 0.1f, 0.72f));
-            EnsurePanel(canvasGo.transform, "SessionPanel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(420f, 86f), new Color(0.03f, 0.07f, 0.1f, 0.75f));
+            // RIGHT = Front service board
+            CookingSimHud.EnsurePanel(root, "FrontPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(1f, 1f), new Vector2(-18f, -88f), new Vector2(480f, 360f), CookingSimHud.PanelBg);
+            CookingSimHud.EnsureLabel(root, "FrontTitle", "【サービス】表 · ダイナーフロア",
+                new Vector2(-34f, -98f), TextAnchor.UpperRight, CookingSimHud.FontHeader, CookingSimHud.Gold,
+                FontStyle.Bold, 450f, 34f);
+            prep = CookingSimHud.EnsureLabel(root, "PrepLabel", "仕込み: 0",
+                new Vector2(-34f, -140f), TextAnchor.UpperRight, 28, CookingSimHud.White, FontStyle.Bold, 420f, 36f);
+            serve = CookingSimHud.EnsureLabel(root, "ServeLabel", "提供: 0",
+                new Vector2(-34f, -178f), TextAnchor.UpperRight, 28, CookingSimHud.Cream, FontStyle.Bold, 420f, 36f);
+            prepFill = CookingSimHud.EnsureLabeledBar(root, "PrepBar", "仕込みゲージ",
+                new Vector2(-34f, -220f), TextAnchor.UpperRight, CookingSimHud.Gold, 400f, 24f);
+            serveFill = CookingSimHud.EnsureLabeledBar(root, "ServeBar", "提供ゲージ",
+                new Vector2(-34f, -268f), TextAnchor.UpperRight, CookingSimHud.Teal, 400f, 24f);
+            cookFeedback = CookingSimHud.EnsureLabel(root, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
+                new Vector2(-34f, -320f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 440f, 34f);
+            CookingSimHud.EnsureLabel(root, "ServeRhythmHint", LocalTwoPlayerBindings.HudFrontServeHint,
+                new Vector2(-34f, -354f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Cream,
+                FontStyle.Normal, 440f, 30f);
+            CookingSimHud.EnsureLabel(root, "FrontBeatHint", LocalTwoPlayerBindings.HudFrontBeatHint,
+                new Vector2(-34f, -384f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Gold,
+                FontStyle.Normal, 440f, 28f);
+            CookingSimHud.EnsureLabel(root, "FrontSnapHint", "◆ C2 スナップ  Tab長押し",
+                new Vector2(-34f, -414f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 440f, 30f);
 
-            EnsureLabel(canvasGo.transform, "BackTitle", "裏 · リズムステーション", new Vector2(28f, -78f), TextAnchor.UpperLeft, 20, Gold);
-            EnsureLabel(canvasGo.transform, "FrontTitle", "表 · ダイナーフロア", new Vector2(-28f, -78f), TextAnchor.UpperRight, 20, Gold);
+            // Center session ticket
+            CookingSimHud.EnsurePanel(root, "SessionPanel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(460f, 110f), CookingSimHud.PanelBg);
+            timer = CookingSimHud.EnsureLabel(root, "TimerLabel", "残り 30.0s / ビート 0/32",
+                new Vector2(0f, -112f), TextAnchor.UpperCenter, CookingSimHud.FontBody, CookingSimHud.White,
+                FontStyle.Bold, 440f, 34f);
+            sessionFill = CookingSimHud.EnsureLabeledBar(root, "SessionBar", "セッション進行",
+                new Vector2(0f, -152f), TextAnchor.UpperCenter, CookingSimHud.Teal, 400f, 22f);
 
-            judgement = EnsureLabel(canvasGo.transform, "JudgementLabel", "判定: —", new Vector2(28f, -112f), TextAnchor.UpperLeft, 24, Gold);
-            combo = EnsureLabel(canvasGo.transform, "ComboLabel", "コンボ: 0", new Vector2(28f, -148f), TextAnchor.UpperLeft, 20, Gold);
-            bpmLabel = EnsureLabel(canvasGo.transform, "BpmLabel", "BPM: 120", new Vector2(28f, -180f), TextAnchor.UpperLeft, 18, Teal);
-            SetLabelText(EnsureLabel(canvasGo.transform, "BackControlsHint", LocalTwoPlayerBindings.HudBackHint,
-                new Vector2(28f, -212f), TextAnchor.UpperLeft, 14, Teal), LocalTwoPlayerBindings.HudBackHint);
-
-            prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-28f, -112f), TextAnchor.UpperRight, 24, Gold);
-            serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-28f, -146f), TextAnchor.UpperRight, 24, Teal);
-            timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -92f), TextAnchor.UpperCenter, 18, Gold);
-            cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
-                new Vector2(-28f, -210f), TextAnchor.UpperRight, 15, Gold);
-            SetLabelText(cookFeedback, LocalTwoPlayerBindings.HudFrontCookHint);
-
-            SetLabelText(EnsureLabel(canvasGo.transform, "ServeRhythmHint",
-                LocalTwoPlayerBindings.HudFrontServeHint,
-                new Vector2(-28f, -238f), TextAnchor.UpperRight, 14, Teal), LocalTwoPlayerBindings.HudFrontServeHint);
-
-            SetLabelText(EnsureLabel(canvasGo.transform, "FrontBeatHint",
-                LocalTwoPlayerBindings.HudFrontBeatHint,
-                new Vector2(-28f, -264f), TextAnchor.UpperRight, 13, Gold), LocalTwoPlayerBindings.HudFrontBeatHint);
-
-            SetLabelText(EnsureLabel(canvasGo.transform, "FrontSnapHint",
-                LocalTwoPlayerBindings.HudFrontSnapHint,
-                new Vector2(-28f, -288f), TextAnchor.UpperRight, 13, Teal), LocalTwoPlayerBindings.HudFrontSnapHint);
-
-            sessionFill = EnsureBar(canvasGo.transform, "SessionBar", new Vector2(0f, -112f), TextAnchor.UpperCenter, Teal, 360f);
-            prepFill = EnsureBar(canvasGo.transform, "PrepBar", new Vector2(-28f, -178f), TextAnchor.UpperRight, Gold, 240f);
-            serveFill = EnsureBar(canvasGo.transform, "ServeBar", new Vector2(-28f, -198f), TextAnchor.UpperRight, Teal, 240f);
-            serveMeter = EnsureBar(canvasGo.transform, "ServeRhythmMeter", new Vector2(-28f, -316f), TextAnchor.UpperRight, Gold, 280f);
+            // Big serve rhythm meter (Cooking Sim style action gauge)
+            CookingSimHud.EnsurePanel(root, "ServeMeterPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(1f, 1f), new Vector2(-18f, -470f), new Vector2(480f, 88f), CookingSimHud.PanelBgSoft);
+            serveMeter = CookingSimHud.EnsureLabeledBar(root, "ServeRhythmMeter", "◆ 配膳リズムメーター  J·K",
+                new Vector2(-34f, -484f), TextAnchor.UpperRight, CookingSimHud.GoldBright, 440f, 32f, CookingSimHud.FontRow);
             serveMeter.fillAmount = 0f;
 
-            var helpPanel = EnsurePanel(canvasGo.transform, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1760f, 52f), new Color(0.03f, 0.07f, 0.1f, 0.8f));
-            var help = EnsureLabel(helpPanel.transform, "HelpLabel",
-                LocalTwoPlayerBindings.HudHelp,
-                new Vector2(0f, 0f), TextAnchor.MiddleCenter, 14, Gold);
-            SetLabelText(help, LocalTwoPlayerBindings.HudHelp);
-            help.rectTransform.anchorMin = Vector2.zero;
-            help.rectTransform.anchorMax = Vector2.one;
-            help.rectTransform.offsetMin = new Vector2(12f, 4f);
-            help.rectTransform.offsetMax = new Vector2(-12f, -4f);
-
-            var rowGo = canvasGo.transform.Find("InventoryRow");
+            // Inventory slots row (right region)
+            var rowGo = root.Find("InventoryRow");
             if (rowGo == null)
             {
                 var go = new GameObject("InventoryRow");
-                go.transform.SetParent(canvasGo.transform, false);
+                go.transform.SetParent(root, false);
                 invRow = go.AddComponent<RectTransform>();
-                invRow.anchorMin = new Vector2(0.78f, 1f);
-                invRow.anchorMax = new Vector2(0.78f, 1f);
-                invRow.pivot = new Vector2(0.5f, 1f);
-                invRow.anchoredPosition = new Vector2(0f, -360f);
-                invRow.sizeDelta = new Vector2(560f, 72f);
             }
             else
             {
-                invRow = rowGo.GetComponent<RectTransform>();
+                invRow = rowGo.GetComponent<RectTransform>() ?? rowGo.gameObject.AddComponent<RectTransform>();
             }
 
-            resultRoot = canvasGo.transform.Find("ResultOverlay")?.gameObject;
+            invRow.anchorMin = new Vector2(1f, 1f);
+            invRow.anchorMax = new Vector2(1f, 1f);
+            invRow.pivot = new Vector2(1f, 1f);
+            invRow.anchoredPosition = new Vector2(-28f, -580f);
+            invRow.sizeDelta = new Vector2(700f, 96f);
+
+            // Bottom help strip
+            var helpPanel = CookingSimHud.EnsurePanel(root, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(1840f, 64f), CookingSimHud.PanelBg);
+            var help = CookingSimHud.EnsureChildLabel(helpPanel.transform, "HelpLabel",
+                LocalTwoPlayerBindings.HudHelp, CookingSimHud.FontHint, CookingSimHud.Cream);
+            help.alignment = TextAnchor.MiddleCenter;
+            var helpRt = help.rectTransform;
+            helpRt.anchorMin = Vector2.zero;
+            helpRt.anchorMax = Vector2.one;
+            helpRt.offsetMin = new Vector2(16f, 6f);
+            helpRt.offsetMax = new Vector2(-16f, -6f);
+
+            resultRoot = root.Find("ResultOverlay")?.gameObject;
             if (resultRoot == null)
             {
-                resultRoot = EnsurePanel(canvasGo.transform, "ResultOverlay", new Vector2(0f, 0f), new Vector2(1f, 1f),
-                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.05f, 0.08f, 0.92f));
+                resultRoot = CookingSimHud.EnsurePanel(root, "ResultOverlay", new Vector2(0f, 0f), new Vector2(1f, 1f),
+                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero,
+                    new Color(0.02f, 0.04f, 0.06f, 0.94f), goldBorder: false);
                 var rt = resultRoot.GetComponent<RectTransform>();
                 rt.offsetMin = Vector2.zero;
                 rt.offsetMax = Vector2.zero;
@@ -777,176 +793,13 @@ namespace BackbeatDiner.Core
                 var dim = resultRoot.GetComponent<Image>();
                 if (dim != null)
                 {
-                    dim.color = new Color(0.02f, 0.05f, 0.08f, 0.92f);
+                    dim.color = new Color(0.02f, 0.04f, 0.06f, 0.94f);
                 }
             }
 
-            // Raise above gameplay HUD chrome so buttons stay clickable.
             resultRoot.transform.SetAsLastSibling();
             ResultOverlayController.BuildPolishedUi(resultRoot, out resultTitle, out resultBody, out retryButton, out titleButton);
             resultRoot.SetActive(false);
-        }
-
-        private static GameObject EnsurePanel(
-            Transform parent,
-            string name,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Vector2 pivot,
-            Vector2 anchoredPos,
-            Vector2 size,
-            Color color)
-        {
-            var existing = parent.Find(name);
-            if (existing != null)
-            {
-                return existing.gameObject;
-            }
-
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var img = go.AddComponent<Image>();
-            img.color = color;
-            var rt = img.rectTransform;
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            rt.pivot = pivot;
-            rt.anchoredPosition = anchoredPos;
-            rt.sizeDelta = size;
-            return go;
-        }
-
-        private static Image EnsureBar(Transform parent, string name, Vector2 anchoredPos, TextAnchor corner, Color color, float width)
-        {
-            var existing = parent.Find(name);
-            if (existing != null)
-            {
-                var fillExisting = existing.Find("Fill");
-                if (fillExisting != null)
-                {
-                    return fillExisting.GetComponent<Image>();
-                }
-            }
-
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var bg = go.AddComponent<Image>();
-            bg.color = new Color(0.05f, 0.1f, 0.12f, 0.85f);
-            var rt = bg.rectTransform;
-            switch (corner)
-            {
-                case TextAnchor.UpperRight:
-                    rt.anchorMin = new Vector2(1f, 1f);
-                    rt.anchorMax = new Vector2(1f, 1f);
-                    rt.pivot = new Vector2(1f, 1f);
-                    break;
-                case TextAnchor.UpperCenter:
-                    rt.anchorMin = new Vector2(0.5f, 1f);
-                    rt.anchorMax = new Vector2(0.5f, 1f);
-                    rt.pivot = new Vector2(0.5f, 1f);
-                    break;
-                default:
-                    rt.anchorMin = new Vector2(0f, 1f);
-                    rt.anchorMax = new Vector2(0f, 1f);
-                    rt.pivot = new Vector2(0f, 1f);
-                    break;
-            }
-
-            rt.anchoredPosition = anchoredPos;
-            rt.sizeDelta = new Vector2(width, 14f);
-
-            var fillGo = new GameObject("Fill");
-            fillGo.transform.SetParent(go.transform, false);
-            var fill = fillGo.AddComponent<Image>();
-            fill.color = color;
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
-            fill.fillAmount = 0.35f;
-            var frt = fill.rectTransform;
-            frt.anchorMin = Vector2.zero;
-            frt.anchorMax = Vector2.one;
-            frt.offsetMin = new Vector2(2f, 2f);
-            frt.offsetMax = new Vector2(-2f, -2f);
-            return fill;
-        }
-
-        private static void SetLabelText(Text label, string text)
-        {
-            if (label != null)
-            {
-                label.text = text;
-            }
-        }
-
-        private static Text EnsureLabel(Transform parent, string name, string text, Vector2 anchoredPos, TextAnchor corner, int fontSize, Color color)
-        {
-            var existing = parent.Find(name);
-            if (existing != null)
-            {
-                var t = existing.GetComponent<Text>();
-                if (t != null)
-                {
-                    t.text = text;
-                    return t;
-                }
-            }
-
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var label = go.AddComponent<Text>();
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                         ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-            label.text = text;
-            label.fontSize = fontSize;
-            label.color = color;
-            label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            label.verticalOverflow = VerticalWrapMode.Overflow;
-
-            var rt = label.rectTransform;
-            switch (corner)
-            {
-                case TextAnchor.UpperLeft:
-                    rt.anchorMin = new Vector2(0f, 1f);
-                    rt.anchorMax = new Vector2(0f, 1f);
-                    rt.pivot = new Vector2(0f, 1f);
-                    label.alignment = TextAnchor.UpperLeft;
-                    break;
-                case TextAnchor.UpperRight:
-                    rt.anchorMin = new Vector2(1f, 1f);
-                    rt.anchorMax = new Vector2(1f, 1f);
-                    rt.pivot = new Vector2(1f, 1f);
-                    label.alignment = TextAnchor.UpperRight;
-                    break;
-                case TextAnchor.UpperCenter:
-                    rt.anchorMin = new Vector2(0.5f, 1f);
-                    rt.anchorMax = new Vector2(0.5f, 1f);
-                    rt.pivot = new Vector2(0.5f, 1f);
-                    label.alignment = TextAnchor.UpperCenter;
-                    break;
-                case TextAnchor.LowerCenter:
-                    rt.anchorMin = new Vector2(0.5f, 0f);
-                    rt.anchorMax = new Vector2(0.5f, 0f);
-                    rt.pivot = new Vector2(0.5f, 0f);
-                    label.alignment = TextAnchor.MiddleCenter;
-                    break;
-                case TextAnchor.MiddleCenter:
-                    rt.anchorMin = new Vector2(0.5f, 0.5f);
-                    rt.anchorMax = new Vector2(0.5f, 0.5f);
-                    rt.pivot = new Vector2(0.5f, 0.5f);
-                    label.alignment = TextAnchor.MiddleCenter;
-                    break;
-                default:
-                    rt.anchorMin = new Vector2(0.5f, 1f);
-                    rt.anchorMax = new Vector2(0.5f, 1f);
-                    rt.pivot = new Vector2(0.5f, 1f);
-                    label.alignment = TextAnchor.MiddleCenter;
-                    break;
-            }
-
-            rt.anchoredPosition = anchoredPos;
-            rt.sizeDelta = new Vector2(640f, 44f);
-            return label;
         }
 
         private GameObject CreatePrim(PrimitiveType type, string name, Transform parent, Vector3 localPos, Vector3 scale, Color color)

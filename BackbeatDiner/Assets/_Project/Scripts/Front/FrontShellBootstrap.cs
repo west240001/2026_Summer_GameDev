@@ -1,4 +1,5 @@
 using BackbeatDiner.Coop;
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -95,44 +96,59 @@ namespace BackbeatDiner.Front
             out Image cooldownFill,
             out RectTransform inventoryRow)
         {
-            var canvasGo = GameObject.Find("FrontHUD");
-            if (canvasGo == null)
-            {
-                canvasGo = new GameObject("FrontHUD");
-                var canvas = canvasGo.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 10;
-                canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                canvasGo.AddComponent<GraphicRaycaster>();
-            }
+            var canvas = CookingSimHud.EnsureOverlayCanvas("FrontHUD", 10);
+            var root = canvas.transform;
 
-            waiting = EnsureLabel(canvasGo.transform, "WaitingLabel", "客待ち: 0", new Vector2(24f, -24f), TextAnchor.UpperLeft, 26);
-            inventory = EnsureLabel(canvasGo.transform, "InventoryLabel", "在庫: —", new Vector2(24f, -64f), TextAnchor.UpperLeft, 22);
-            quota = EnsureLabel(canvasGo.transform, "QuotaLabel", "クォータ: 0/8", new Vector2(-24f, -24f), TextAnchor.UpperRight, 24);
-            cooldown = EnsureLabel(canvasGo.transform, "CooldownLabel", "CD: —", new Vector2(-24f, -64f), TextAnchor.UpperRight, 22);
-            EnsureLabel(canvasGo.transform, "HelpLabel", "1–4 = Beat-F（ビジー/大口/在庫赤/ラスト客）　B = 裏ビート受信シミュレート　CD 8s / 同一20s", new Vector2(0f, 28f), TextAnchor.LowerCenter, 18);
+            var shellPanel = CookingSimHud.EnsurePanel(root, "FrontShellPanel",
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -16f), new Vector2(1760f, 210f), CookingSimHud.PanelBg);
+            _ = shellPanel;
 
-            quotaFill = EnsureBar(canvasGo.transform, "QuotaBar", new Vector2(-24f, -100f), TextAnchor.UpperRight, FrontHudController.Gold);
-            cooldownFill = EnsureBar(canvasGo.transform, "CooldownBar", new Vector2(-24f, -130f), TextAnchor.UpperRight, FrontHudController.Teal);
+            waiting = CookingSimHud.EnsureLabel(root, "WaitingLabel", "客待ち: 0",
+                new Vector2(36f, -36f), TextAnchor.UpperLeft, CookingSimHud.FontTitle, CookingSimHud.White, FontStyle.Bold, 480f, 40f);
+            inventory = CookingSimHud.EnsureLabel(root, "InventoryLabel", "在庫: —",
+                new Vector2(36f, -84f), TextAnchor.UpperLeft, CookingSimHud.FontBody, CookingSimHud.Cream, FontStyle.Normal, 480f, 34f);
+            quota = CookingSimHud.EnsureLabel(root, "QuotaLabel", "クォータ: 0/8",
+                new Vector2(-36f, -36f), TextAnchor.UpperRight, CookingSimHud.FontHeader, CookingSimHud.Gold, FontStyle.Bold, 420f, 36f);
+            cooldown = CookingSimHud.EnsureLabel(root, "CooldownLabel", "CD: —",
+                new Vector2(-36f, -80f), TextAnchor.UpperRight, CookingSimHud.FontBody, CookingSimHud.Cream, FontStyle.Normal, 420f, 32f);
 
-            var rowGo = canvasGo.transform.Find("InventoryRow");
+            quotaFill = CookingSimHud.EnsureLabeledBar(root, "QuotaBar", "クォータ",
+                new Vector2(-36f, -120f), TextAnchor.UpperRight, CookingSimHud.Gold, 360f, 22f);
+            cooldownFill = CookingSimHud.EnsureLabeledBar(root, "CooldownBar", "ビート CD",
+                new Vector2(-36f, -168f), TextAnchor.UpperRight, CookingSimHud.Teal, 360f, 22f);
+
+            var helpPanel = CookingSimHud.EnsurePanel(root, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(1600f, 56f), CookingSimHud.PanelBg);
+            var help = CookingSimHud.EnsureChildLabel(helpPanel.transform, "HelpLabel",
+                "1–4 = Beat-F（ビジー/大口/在庫赤/ラスト客）　B = 裏ビート受信シミュレート　CD 8s / 同一20s",
+                CookingSimHud.FontHint, CookingSimHud.Cream);
+            help.alignment = TextAnchor.MiddleCenter;
+            var helpRt = help.rectTransform;
+            helpRt.anchorMin = Vector2.zero;
+            helpRt.anchorMax = Vector2.one;
+            helpRt.offsetMin = new Vector2(12f, 4f);
+            helpRt.offsetMax = new Vector2(-12f, -4f);
+
+            var rowGo = root.Find("InventoryRow");
             if (rowGo == null)
             {
                 var go = new GameObject("InventoryRow");
-                go.transform.SetParent(canvasGo.transform, false);
+                go.transform.SetParent(root, false);
                 inventoryRow = go.AddComponent<RectTransform>();
-                inventoryRow.anchorMin = new Vector2(0.5f, 1f);
-                inventoryRow.anchorMax = new Vector2(0.5f, 1f);
-                inventoryRow.pivot = new Vector2(0.5f, 1f);
-                inventoryRow.anchoredPosition = new Vector2(0f, -160f);
-                inventoryRow.sizeDelta = new Vector2(640f, 72f);
             }
             else
             {
-                inventoryRow = rowGo.GetComponent<RectTransform>();
+                inventoryRow = rowGo.GetComponent<RectTransform>() ?? rowGo.gameObject.AddComponent<RectTransform>();
             }
 
-            return canvasGo.GetComponent<Canvas>();
+            inventoryRow.anchorMin = new Vector2(0.5f, 1f);
+            inventoryRow.anchorMax = new Vector2(0.5f, 1f);
+            inventoryRow.pivot = new Vector2(0.5f, 1f);
+            inventoryRow.anchoredPosition = new Vector2(0f, -250f);
+            inventoryRow.sizeDelta = new Vector2(720f, 100f);
+
+            return canvas;
         }
 
         private static Text EnsureLabel(Transform parent, string name, string text, Vector2 anchoredPos, TextAnchor corner, int fontSize)

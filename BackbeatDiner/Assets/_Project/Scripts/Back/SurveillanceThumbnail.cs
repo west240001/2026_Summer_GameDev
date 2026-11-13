@@ -1,3 +1,4 @@
+using BackbeatDiner.Core;
 using BackbeatDiner.Front;
 using BackbeatDiner.Rhythm;
 using UnityEngine;
@@ -12,10 +13,10 @@ namespace BackbeatDiner.Back
     /// </summary>
     public sealed class SurveillanceThumbnail : MonoBehaviour
     {
-        private static readonly Color Gold = FrontHudController.Gold;
-        private static readonly Color Teal = FrontHudController.Teal;
-        private static readonly Color PanelBg = new Color(0.03f, 0.07f, 0.1f, 0.88f);
-        private static readonly Color BlindBg = new Color(0.02f, 0.02f, 0.04f, 0.82f);
+        private static readonly Color Gold = CookingSimHud.Gold;
+        private static readonly Color Teal = CookingSimHud.Teal;
+        private static readonly Color PanelBg = CookingSimHud.PanelBg;
+        private static readonly Color BlindBg = new Color(0.02f, 0.02f, 0.04f, 0.88f);
 
         [SerializeField] private NoteHighway highway;
         [SerializeField] private Camera frontCamera;
@@ -237,25 +238,54 @@ namespace BackbeatDiner.Back
 
             var root = canvasGo.transform.Find("SurveillanceHud");
             GameObject rootGo;
+            Image bg;
             if (root == null)
             {
                 rootGo = new GameObject("SurveillanceHud");
                 rootGo.transform.SetParent(canvasGo.transform, false);
-                var bg = rootGo.AddComponent<Image>();
-                bg.color = PanelBg;
-                bg.raycastTarget = false;
-                var rt = bg.rectTransform;
-                // Back half, top-right (near center split) — KG-3 right-thumb wire.
-                rt.anchorMin = new Vector2(0.5f, 1f);
-                rt.anchorMax = new Vector2(0.5f, 1f);
-                rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-10f, -12f);
-                rt.sizeDelta = new Vector2(248f, 168f);
+                bg = rootGo.AddComponent<Image>();
             }
             else
             {
                 rootGo = root.gameObject;
+                bg = rootGo.GetComponent<Image>() ?? rootGo.AddComponent<Image>();
             }
+
+            bg.color = PanelBg;
+            bg.raycastTarget = false;
+            var rt = bg.rectTransform;
+            // Back half, lower-right of left region — clear PiP with gold border
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(0f, 0f);
+            rt.pivot = new Vector2(0f, 0f);
+            rt.anchoredPosition = new Vector2(20f, 280f);
+            rt.sizeDelta = new Vector2(320f, 210f);
+
+            var outline = rootGo.GetComponent<Outline>() ?? rootGo.AddComponent<Outline>();
+            outline.effectColor = CookingSimHud.BorderGold;
+            outline.effectDistance = new Vector2(3f, -3f);
+
+            // Inner teal frame for PiP clarity
+            var frameT = rootGo.transform.Find("PipFrame");
+            Image frame;
+            if (frameT == null)
+            {
+                var frameGo = new GameObject("PipFrame");
+                frameGo.transform.SetParent(rootGo.transform, false);
+                frame = frameGo.AddComponent<Image>();
+            }
+            else
+            {
+                frame = frameT.GetComponent<Image>() ?? frameT.gameObject.AddComponent<Image>();
+            }
+
+            frame.color = new Color(Teal.r, Teal.g, Teal.b, 0.55f);
+            frame.raycastTarget = false;
+            var frt = frame.rectTransform;
+            frt.anchorMin = new Vector2(0f, 0f);
+            frt.anchorMax = new Vector2(1f, 1f);
+            frt.offsetMin = new Vector2(6f, 6f);
+            frt.offsetMax = new Vector2(-6f, -34f);
 
             _title = EnsureTitle(rootGo.transform);
 
@@ -265,20 +295,20 @@ namespace BackbeatDiner.Back
                 var rawGo = new GameObject("SurveillanceRaw");
                 rawGo.transform.SetParent(rootGo.transform, false);
                 _raw = rawGo.AddComponent<RawImage>();
-                _raw.raycastTarget = false;
-                var rt = _raw.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.offsetMin = new Vector2(8f, 8f);
-                rt.offsetMax = new Vector2(-8f, -30f);
             }
             else
             {
                 _raw = rawT.GetComponent<RawImage>() ?? rawT.gameObject.AddComponent<RawImage>();
             }
 
+            _raw.raycastTarget = false;
             _raw.texture = _rt;
             _raw.color = Color.white;
+            var rawRt = _raw.rectTransform;
+            rawRt.anchorMin = new Vector2(0f, 0f);
+            rawRt.anchorMax = new Vector2(1f, 1f);
+            rawRt.offsetMin = new Vector2(10f, 10f);
+            rawRt.offsetMax = new Vector2(-10f, -38f);
 
             var blindT = rootGo.transform.Find("BlindOverlay");
             if (blindT == null)
@@ -288,16 +318,19 @@ namespace BackbeatDiner.Back
                 var img = _blindRoot.AddComponent<Image>();
                 img.color = BlindBg;
                 img.raycastTarget = false;
-                var rt = img.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.offsetMin = new Vector2(8f, 8f);
-                rt.offsetMax = new Vector2(-8f, -30f);
             }
             else
             {
                 _blindRoot = blindT.gameObject;
+                var img = _blindRoot.GetComponent<Image>() ?? _blindRoot.AddComponent<Image>();
+                img.color = BlindBg;
             }
+
+            var blindRt = _blindRoot.GetComponent<RectTransform>();
+            blindRt.anchorMin = new Vector2(0f, 0f);
+            blindRt.anchorMax = new Vector2(1f, 1f);
+            blindRt.offsetMin = new Vector2(10f, 10f);
+            blindRt.offsetMax = new Vector2(-10f, -38f);
 
             _blindLabel = EnsureBlindLabel(_blindRoot.transform);
             _blindRoot.SetActive(false);
@@ -312,26 +345,25 @@ namespace BackbeatDiner.Back
                 var go = new GameObject("SurveillanceTitle");
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.raycastTarget = false;
-                var rt = label.rectTransform;
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.pivot = new Vector2(0.5f, 1f);
-                rt.anchoredPosition = new Vector2(0f, -4f);
-                rt.sizeDelta = new Vector2(-16f, 22f);
             }
             else
             {
                 label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
-            label.fontSize = 18;
+            label.font = CookingSimHud.UiFont();
+            label.raycastTarget = false;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -4f);
+            rt.sizeDelta = new Vector2(-12f, 28f);
+            label.fontSize = CookingSimHud.FontRow;
             label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.MiddleLeft;
             label.color = Teal;
-            label.text = "監視";
+            label.text = "監視カメラ（表フロア）";
             return label;
         }
 
@@ -344,25 +376,24 @@ namespace BackbeatDiner.Back
                 var go = new GameObject("BlindLabel");
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.raycastTarget = false;
-                var rt = label.rectTransform;
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
-                rt.offsetMin = Vector2.zero;
-                rt.offsetMax = Vector2.zero;
             }
             else
             {
                 label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
-            label.fontSize = 22;
+            label.font = CookingSimHud.UiFont();
+            label.raycastTarget = false;
+            var rt = label.rectTransform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            label.fontSize = 28;
             label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Gold;
-            label.text = "BLIND\n譜面中";
+            label.text = "BLIND\n譜面演奏中";
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.verticalOverflow = VerticalWrapMode.Overflow;
             return label;

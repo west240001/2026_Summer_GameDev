@@ -1,4 +1,5 @@
 using BackbeatDiner.Coop;
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,8 +11,9 @@ namespace BackbeatDiner.Front
     /// </summary>
     public sealed class FrontHudController : MonoBehaviour
     {
-        public static readonly Color Gold = new Color(0.7882353f, 0.6352941f, 0.15294118f); // #C9A227
-        public static readonly Color Teal = new Color(0.101960784f, 0.419607843f, 0.419607843f); // #1A6B6B
+        // Alias CookingSimHud palette so Week2 shell stays in sync with VerticalSlice.
+        public static readonly Color Gold = CookingSimHud.Gold;
+        public static readonly Color Teal = CookingSimHud.Teal;
 
         [SerializeField] private Text waitingLabel;
         [SerializeField] private Text inventoryLabel;

@@ -1,5 +1,4 @@
 using BackbeatDiner.Core;
-using BackbeatDiner.Front;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,8 +11,8 @@ namespace BackbeatDiner.Coop
     /// </summary>
     public sealed class ChartGapCoopWindow : MonoBehaviour
     {
-        private static readonly Color Gold = FrontHudController.Gold;
-        private static readonly Color Teal = FrontHudController.Teal;
+        private static readonly Color Gold = CookingSimHud.Gold;
+        private static readonly Color Teal = CookingSimHud.Teal;
 
         private const string PromptTitle = "協力ウィンドウ";
         private const string PromptSnap = "スナップ推奨 — 表は Tab 長押し0.8sで C2 送信";
@@ -231,18 +230,22 @@ namespace BackbeatDiner.Coop
                 _bannerBg = _root.AddComponent<Image>();
             }
 
-            _bannerBg.color = new Color(0.03f, 0.1f, 0.12f, 0.82f);
+            _bannerBg.color = CookingSimHud.PanelBg;
             var rt = _bannerBg.rectTransform;
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0f, 48f);
-            rt.sizeDelta = new Vector2(720f, 148f);
+            rt.anchoredPosition = new Vector2(0f, 36f);
+            rt.sizeDelta = new Vector2(860f, 200f);
 
-            _title = EnsureLine(_root.transform, "GapTitle", PromptTitle, 26, Gold, new Vector2(0f, 48f));
-            _snapLine = EnsureLine(_root.transform, "GapSnap", PromptSnap, 20, Teal, new Vector2(0f, 14f));
-            _b3Line = EnsureLine(_root.transform, "GapB3", PromptB3, 20, Gold, new Vector2(0f, -16f));
-            _cdLine = EnsureLine(_root.transform, "GapCd", "CD解除ブースト中", 16, Teal, new Vector2(0f, -48f));
+            var outline = _root.GetComponent<Outline>() ?? _root.AddComponent<Outline>();
+            outline.effectColor = CookingSimHud.BorderGold;
+            outline.effectDistance = new Vector2(3f, -3f);
+
+            _title = EnsureLine(_root.transform, "GapTitle", PromptTitle, CookingSimHud.FontTitle, Gold, new Vector2(0f, 68f));
+            _snapLine = EnsureLine(_root.transform, "GapSnap", PromptSnap, CookingSimHud.FontBody, CookingSimHud.Cream, new Vector2(0f, 24f));
+            _b3Line = EnsureLine(_root.transform, "GapB3", PromptB3, CookingSimHud.FontBody, Gold, new Vector2(0f, -16f));
+            _cdLine = EnsureLine(_root.transform, "GapCd", "CD解除ブースト中", CookingSimHud.FontRow, Teal, new Vector2(0f, -60f));
         }
 
         private static Text EnsureLine(Transform parent, string name, string text, int size, Color color, Vector2 pos)
@@ -254,24 +257,25 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(name);
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.alignment = TextAnchor.MiddleCenter;
-                var rt = label.rectTransform;
-                rt.anchorMin = new Vector2(0.5f, 0.5f);
-                rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(680f, 32f);
             }
             else
             {
-                label = t.GetComponent<Text>();
+                label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
+            label.font = CookingSimHud.UiFont();
+            label.alignment = TextAnchor.MiddleCenter;
+            label.fontStyle = FontStyle.Bold;
             label.fontSize = size;
             label.color = color;
             label.text = text;
-            label.rectTransform.anchoredPosition = pos;
+            label.raycastTarget = false;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(820f, 36f);
+            rt.anchoredPosition = pos;
             return label;
         }
 

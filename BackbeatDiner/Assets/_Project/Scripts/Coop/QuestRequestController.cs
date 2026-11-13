@@ -1,4 +1,5 @@
 using System;
+using BackbeatDiner.Core;
 using BackbeatDiner.Front;
 using BackbeatDiner.Rhythm;
 using UnityEngine;
@@ -162,27 +163,33 @@ namespace BackbeatDiner.Coop
 
             var root = canvasGo.transform.Find("QuestRequestHud");
             GameObject rootGo;
+            Image bg;
             if (root == null)
             {
                 rootGo = new GameObject("QuestRequestHud");
                 rootGo.transform.SetParent(canvasGo.transform, false);
-                var bg = rootGo.AddComponent<Image>();
-                bg.color = new Color(0.03f, 0.07f, 0.1f, 0.82f);
-                var rt = bg.rectTransform;
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(0f, 1f);
-                rt.pivot = new Vector2(0f, 1f);
-                rt.anchoredPosition = new Vector2(16f, -510f);
-                rt.sizeDelta = new Vector2(320f, 56f);
+                bg = rootGo.AddComponent<Image>();
             }
             else
             {
                 rootGo = root.gameObject;
+                bg = rootGo.GetComponent<Image>() ?? rootGo.AddComponent<Image>();
             }
 
-            _status = EnsureLabel(rootGo.transform, "QuestStatus", "Q → C1 クエスト要求", 16,
-                FrontHudController.Teal, new Vector2(0f, 6f));
-            _cdFill = EnsureBar(rootGo.transform, "QuestCdBar", new Vector2(8f, -16f), FrontHudController.Teal);
+            bg.color = CookingSimHud.PanelBg;
+            var rt = bg.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(18f, -640f);
+            rt.sizeDelta = new Vector2(420f, 96f);
+            var outline = rootGo.GetComponent<Outline>() ?? rootGo.AddComponent<Outline>();
+            outline.effectColor = CookingSimHud.BorderGold;
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            _status = EnsureLabel(rootGo.transform, "QuestStatus", "◆ C1 クエスト要求  Qキー", CookingSimHud.FontBody,
+                CookingSimHud.GoldBright, new Vector2(0f, 18f));
+            _cdFill = EnsureBar(rootGo.transform, "QuestCdBar", new Vector2(14f, -22f), CookingSimHud.Teal, 380f);
         }
 
         private static Text EnsureLabel(Transform parent, string name, string text, int size, Color color, Vector2 pos)
@@ -194,54 +201,70 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(name);
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.alignment = TextAnchor.MiddleLeft;
-                var rt = label.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0.5f);
-                rt.anchorMax = new Vector2(1f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(10f, -12f);
-                rt.offsetMax = new Vector2(-10f, 12f);
             }
             else
             {
-                label = t.GetComponent<Text>();
+                label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
+            label.font = CookingSimHud.UiFont();
+            label.alignment = TextAnchor.MiddleLeft;
+            label.fontStyle = FontStyle.Bold;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(14f, -14f);
+            rt.offsetMax = new Vector2(-14f, 14f);
             label.fontSize = size;
             label.color = color;
             label.text = text;
+            label.raycastTarget = false;
             label.rectTransform.anchoredPosition = pos;
             return label;
         }
 
-        private static Image EnsureBar(Transform parent, string name, Vector2 pos, Color color)
+        private static Image EnsureBar(Transform parent, string name, Vector2 pos, Color color, float width)
         {
             var existing = parent.Find(name);
+            Image fill;
             if (existing != null)
             {
                 var fillExisting = existing.Find("Fill");
                 if (fillExisting != null)
                 {
-                    return fillExisting.GetComponent<Image>();
+                    fill = fillExisting.GetComponent<Image>();
+                    var existingRt = existing.GetComponent<RectTransform>();
+                    existingRt.anchoredPosition = pos;
+                    existingRt.sizeDelta = new Vector2(width, CookingSimHud.BarHeight);
+                    fill.color = color;
+                    return fill;
                 }
             }
 
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var bg = go.AddComponent<Image>();
-            bg.color = new Color(0.05f, 0.1f, 0.12f, 0.9f);
+            var go = existing != null ? existing.gameObject : new GameObject(name);
+            if (existing == null)
+            {
+                go.transform.SetParent(parent, false);
+            }
+
+            var bg = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            bg.color = CookingSimHud.BarTrack;
             var rt = bg.rectTransform;
             rt.anchorMin = new Vector2(0f, 0.5f);
             rt.anchorMax = new Vector2(0f, 0.5f);
             rt.pivot = new Vector2(0f, 0.5f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(280f, 10f);
+            rt.sizeDelta = new Vector2(width, CookingSimHud.BarHeight);
 
-            var fillGo = new GameObject("Fill");
-            fillGo.transform.SetParent(go.transform, false);
-            var fill = fillGo.AddComponent<Image>();
+            var fillGo = go.transform.Find("Fill")?.gameObject;
+            if (fillGo == null)
+            {
+                fillGo = new GameObject("Fill");
+                fillGo.transform.SetParent(go.transform, false);
+            }
+
+            fill = fillGo.GetComponent<Image>() ?? fillGo.AddComponent<Image>();
             fill.color = color;
             fill.type = Image.Type.Filled;
             fill.fillMethod = Image.FillMethod.Horizontal;
@@ -250,8 +273,8 @@ namespace BackbeatDiner.Coop
             var frt = fill.rectTransform;
             frt.anchorMin = Vector2.zero;
             frt.anchorMax = Vector2.one;
-            frt.offsetMin = new Vector2(1f, 1f);
-            frt.offsetMax = new Vector2(-1f, -1f);
+            frt.offsetMin = new Vector2(2f, 2f);
+            frt.offsetMax = new Vector2(-2f, -2f);
             return fill;
         }
     }

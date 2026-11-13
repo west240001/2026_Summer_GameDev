@@ -1,4 +1,4 @@
-using BackbeatDiner.Front;
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,8 +10,8 @@ namespace BackbeatDiner.Coop
     /// </summary>
     public sealed class SnapshotReceivePanel : MonoBehaviour
     {
-        private static readonly Color Gold = FrontHudController.Gold;
-        private static readonly Color Teal = FrontHudController.Teal;
+        private static readonly Color Gold = CookingSimHud.Gold;
+        private static readonly Color Teal = CookingSimHud.Teal;
 
         [SerializeField] private float panelSeconds = 5f;
         [SerializeField] private AudioSource source;
@@ -212,18 +212,21 @@ namespace BackbeatDiner.Coop
 
             _group = _root.GetComponent<CanvasGroup>() ?? _root.AddComponent<CanvasGroup>();
             var bg = _root.GetComponent<Image>() ?? _root.AddComponent<Image>();
-            bg.color = new Color(0.03f, 0.1f, 0.12f, 0.9f);
+            bg.color = CookingSimHud.PanelBg;
             var rt = bg.rectTransform;
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(16f, -300f);
-            rt.sizeDelta = new Vector2(360f, 196f);
+            rt.anchoredPosition = new Vector2(18f, -380f);
+            rt.sizeDelta = new Vector2(420f, 250f);
+            var outline = _root.GetComponent<Outline>() ?? _root.AddComponent<Outline>();
+            outline.effectColor = CookingSimHud.BorderTeal;
+            outline.effectDistance = new Vector2(2.5f, -2.5f);
 
             _pulseEdge = EnsureEdge(canvasGo.transform);
-            _title = EnsureLine(_root.transform, "SnapTitle", "スナップ着（Snap-In）", 22, Gold, new Vector2(0f, 72f));
-            _customerLine = EnsureLine(_root.transform, "SnapCustomers", "待ち客: —", 17, Teal, new Vector2(0f, 42f));
-            _stockLine = EnsureLine(_root.transform, "SnapStockSummary", "在庫: —", 16, Gold, new Vector2(0f, 16f));
+            _title = EnsureLine(_root.transform, "SnapTitle", "スナップ着（Snap-In）", CookingSimHud.FontHeader, Gold, new Vector2(0f, 96f));
+            _customerLine = EnsureLine(_root.transform, "SnapCustomers", "待ち客: —", CookingSimHud.FontRow, CookingSimHud.Cream, new Vector2(0f, 60f));
+            _stockLine = EnsureLine(_root.transform, "SnapStockSummary", "在庫: —", CookingSimHud.FontRow, Gold, new Vector2(0f, 30f));
 
             _stockLines = new Text[5];
             for (var i = 0; i < 5; i++)
@@ -232,9 +235,9 @@ namespace BackbeatDiner.Coop
                     _root.transform,
                     $"SnapStock_{i}",
                     "—",
-                    14,
+                    CookingSimHud.FontHint,
                     Teal,
-                    new Vector2(0f, -8f - i * 20f));
+                    new Vector2(0f, 0f - i * 24f));
             }
         }
 
@@ -272,24 +275,25 @@ namespace BackbeatDiner.Coop
                 var go = new GameObject(name);
                 go.transform.SetParent(parent, false);
                 label = go.AddComponent<Text>();
-                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                label.alignment = TextAnchor.MiddleLeft;
-                var rt = label.rectTransform;
-                rt.anchorMin = new Vector2(0f, 0.5f);
-                rt.anchorMax = new Vector2(1f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(14f, -12f);
-                rt.offsetMax = new Vector2(-14f, 12f);
             }
             else
             {
-                label = t.GetComponent<Text>();
+                label = t.GetComponent<Text>() ?? t.gameObject.AddComponent<Text>();
             }
 
+            label.font = CookingSimHud.UiFont();
+            label.alignment = TextAnchor.MiddleLeft;
+            label.fontStyle = FontStyle.Bold;
+            var rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(16f, -14f);
+            rt.offsetMax = new Vector2(-16f, 14f);
             label.fontSize = size;
             label.color = color;
             label.text = text;
+            label.raycastTarget = false;
             label.rectTransform.anchoredPosition = pos;
             return label;
         }

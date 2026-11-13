@@ -161,12 +161,12 @@ namespace BackbeatDiner.Core
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(720f, 520f),
-                new Color(0.03f, 0.07f, 0.12f, 0.96f));
+                new Vector2(780f, 560f),
+                CookingSimHud.PanelBg);
 
             var cardOutline = card.AddComponent<Outline>();
-            cardOutline.effectColor = new Color(Gold.r, Gold.g, Gold.b, 0.55f);
-            cardOutline.effectDistance = new Vector2(2f, -2f);
+            cardOutline.effectColor = CookingSimHud.BorderGold;
+            cardOutline.effectDistance = new Vector2(3f, -3f);
 
             CreatePanel(
                 card.transform,
@@ -179,16 +179,16 @@ namespace BackbeatDiner.Core
                 new Color(Gold.r, Gold.g, Gold.b, 0.9f));
 
             resultTitle = CreateLabel(card.transform, "ResultTitle", "営業終了",
-                new Vector2(0f, 190f), 52, Gold, FontStyle.Bold);
+                new Vector2(0f, 200f), 56, CookingSimHud.Gold, FontStyle.Bold);
             resultTitle.alignment = TextAnchor.MiddleCenter;
-            resultTitle.rectTransform.sizeDelta = new Vector2(640f, 64f);
+            resultTitle.rectTransform.sizeDelta = new Vector2(700f, 70f);
 
             resultBody = CreateLabel(card.transform, "ResultBody",
                 "売上仮点数: 0\n\n仕込み・提供サマリ\n提供: 0\n残仕込み: 0",
-                new Vector2(0f, 20f), 26, new Color(0.86f, 0.92f, 0.9f, 1f), FontStyle.Normal);
+                new Vector2(0f, 24f), 28, CookingSimHud.Cream, FontStyle.Normal);
             resultBody.alignment = TextAnchor.UpperCenter;
-            resultBody.rectTransform.sizeDelta = new Vector2(600f, 220f);
-            resultBody.lineSpacing = 1.15f;
+            resultBody.rectTransform.sizeDelta = new Vector2(660f, 240f);
+            resultBody.lineSpacing = 1.2f;
 
             retryButton = CreateActionButton(
                 card.transform,
