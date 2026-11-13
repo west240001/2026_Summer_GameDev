@@ -10,4 +10,4 @@ All files under `Assets/_Project/Audio/` are **original / procedurally generated
 
 No Asset Store packs or third-party samples were downloaded for these beds.
 
-`Chart_DemoA` references `DemoSong_120BPM.wav` via `ChartDefinition.songClip`. `Chart_DemoB` stays metronome-only (128 BPM; demo song is authored at 120 BPM).
+`Chart_DemoA` and `Chart_DemoB` both reference `DemoSong_120BPM.wav` via `ChartDefinition.songClip` at 120 BPM (B is denser mid-day climax; setlist gap between A→B stays for C1/C2/C3).

@@ -13,64 +13,99 @@ MonoBehaviour:
   m_Name: Chart_DemoB
   m_EditorClassIdentifier: BackbeatDiner::BackbeatDiner.Rhythm.ChartDefinition
   displayName: "\u30C7\u30E2B"
-  bpm: 128
-  lengthBeats: 24
+  bpm: 120
+  lengthBeats: 32
+  songClip: {fileID: 8300000, guid: c4d5e6f708192a3b4c5d6e7f8091a2b3, type: 3}
   notes:
   - timeBeats: 1
     lane: 0
-  - timeBeats: 2
+  - timeBeats: 1.5
     lane: 1
-  - timeBeats: 2.5
+  - timeBeats: 2
     lane: 0
-  - timeBeats: 3
+  - timeBeats: 2.5
     lane: 2
+  - timeBeats: 3
+    lane: 0
+  - timeBeats: 3.5
+    lane: 1
   - timeBeats: 4
     lane: 0
   - timeBeats: 4.5
-    lane: 1
+    lane: 0
   - timeBeats: 5
-    lane: 0
-  - timeBeats: 6
-    lane: 0
-  - timeBeats: 6.5
     lane: 2
-  - timeBeats: 7
+  - timeBeats: 6
     lane: 1
-  - timeBeats: 8
+  - timeBeats: 6.5
     lane: 0
-  - timeBeats: 9
+  - timeBeats: 7
     lane: 0
   - timeBeats: 9.5
     lane: 1
   - timeBeats: 10
     lane: 0
+  - timeBeats: 10.5
+    lane: 0
   - timeBeats: 11
     lane: 2
-  - timeBeats: 12
+  - timeBeats: 11.5
     lane: 0
-  - timeBeats: 12.5
+  - timeBeats: 12
     lane: 1
+  - timeBeats: 12.5
+    lane: 0
   - timeBeats: 13
+    lane: 2
+  - timeBeats: 13.5
     lane: 0
   - timeBeats: 14
     lane: 0
   - timeBeats: 15
-    lane: 2
-  - timeBeats: 16
     lane: 0
-  - timeBeats: 16.5
+  - timeBeats: 17.5
     lane: 1
-  - timeBeats: 17
-    lane: 0
   - timeBeats: 18
     lane: 0
-  - timeBeats: 19
+  - timeBeats: 18.5
     lane: 2
+  - timeBeats: 19
+    lane: 0
+  - timeBeats: 19.5
+    lane: 0
   - timeBeats: 20
     lane: 1
+  - timeBeats: 20.5
+    lane: 0
   - timeBeats: 21
     lane: 0
-  - timeBeats: 22
+  - timeBeats: 21.5
     lane: 0
-  - timeBeats: 23
+  - timeBeats: 22
     lane: 1
+  - timeBeats: 23
+    lane: 0
+  - timeBeats: 25
+    lane: 0
+  - timeBeats: 25.5
+    lane: 1
+  - timeBeats: 26
+    lane: 0
+  - timeBeats: 26.5
+    lane: 2
+  - timeBeats: 27
+    lane: 0
+  - timeBeats: 27.5
+    lane: 0
+  - timeBeats: 28
+    lane: 1
+  - timeBeats: 28.5
+    lane: 0
+  - timeBeats: 29
+    lane: 2
+  - timeBeats: 29.5
+    lane: 0
+  - timeBeats: 30
+    lane: 0
+  - timeBeats: 31
+    lane: 0
