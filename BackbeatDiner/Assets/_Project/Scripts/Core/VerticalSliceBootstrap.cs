@@ -62,6 +62,8 @@ namespace BackbeatDiner.Core
             var frontBeats = systems.AddComponent<BeatLexiconDemo>();
             var receivePulse = systems.AddComponent<BeatReceivePulse>();
             var gapCoop = systems.AddComponent<ChartGapCoopWindow>();
+            var snapshotSend = systems.AddComponent<SnapshotSendController>();
+            var snapshotReceive = systems.AddComponent<SnapshotReceivePanel>();
 
             if (metronomeClick == null)
             {
@@ -136,7 +138,10 @@ namespace BackbeatDiner.Core
             frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
             // Gap coop: スナップ推奨 / Beat-B3 hint + brief CD unlock + pulse
             receivePulse.Configure(autoSimulate: false, tutorialToast: false);
-            gapCoop.Configure(backBeats, frontBeats, receivePulse);
+            gapCoop.Configure(backBeats, frontBeats, receivePulse, snapshotSend);
+            // C2: Tab hold 0.8s → send 1.2s → Back Snap-In panel + SE (CD 25s; gap preferred)
+            snapshotReceive.Configure();
+            snapshotSend.Configure(inventory, queue, gapCoop);
 
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
@@ -712,10 +717,14 @@ namespace BackbeatDiner.Core
                 LocalTwoPlayerBindings.HudFrontBeatHint,
                 new Vector2(-28f, -264f), TextAnchor.UpperRight, 13, Gold), LocalTwoPlayerBindings.HudFrontBeatHint);
 
+            SetLabelText(EnsureLabel(canvasGo.transform, "FrontSnapHint",
+                LocalTwoPlayerBindings.HudFrontSnapHint,
+                new Vector2(-28f, -288f), TextAnchor.UpperRight, 13, Teal), LocalTwoPlayerBindings.HudFrontSnapHint);
+
             sessionFill = EnsureBar(canvasGo.transform, "SessionBar", new Vector2(0f, -112f), TextAnchor.UpperCenter, Teal, 360f);
             prepFill = EnsureBar(canvasGo.transform, "PrepBar", new Vector2(-28f, -178f), TextAnchor.UpperRight, Gold, 240f);
             serveFill = EnsureBar(canvasGo.transform, "ServeBar", new Vector2(-28f, -198f), TextAnchor.UpperRight, Teal, 240f);
-            serveMeter = EnsureBar(canvasGo.transform, "ServeRhythmMeter", new Vector2(-28f, -292f), TextAnchor.UpperRight, Gold, 280f);
+            serveMeter = EnsureBar(canvasGo.transform, "ServeRhythmMeter", new Vector2(-28f, -316f), TextAnchor.UpperRight, Gold, 280f);
             serveMeter.fillAmount = 0f;
 
             var helpPanel = EnsurePanel(canvasGo.transform, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
@@ -738,7 +747,7 @@ namespace BackbeatDiner.Core
                 invRow.anchorMin = new Vector2(0.78f, 1f);
                 invRow.anchorMax = new Vector2(0.78f, 1f);
                 invRow.pivot = new Vector2(0.5f, 1f);
-                invRow.anchoredPosition = new Vector2(0f, -320f);
+                invRow.anchoredPosition = new Vector2(0f, -360f);
                 invRow.sizeDelta = new Vector2(560f, 72f);
             }
             else

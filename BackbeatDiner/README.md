@@ -69,8 +69,9 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 | **表** | **Enter**（Gamepad West） | インスタントクック → **配膳リズム**（1〜2小節） |
 | **表** | **J · K**（配膳中） | S1 拍合わせ。Perfect チップ×1.5 / Good×1 / Miss＝基本売上のみ |
 | **表** | **← ↓ → ↑** | **Beat-F1..F4**。**配膳中は表のみロック** — `FrontCommsSendLocked` |
+| **表** | **Tab 長押し** | **C2 スナップショット**：ホールド **0.8s** → 送信 **1.2s** → 裏に在庫／客パネル＋**Snap-In** SE。CD **25s**（**間隙推奨**） |
 | — | 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
-| — | HUD | **BACKBEAT DINER** ロゴ、半透明パネル、セッション／仕込み／提供バー、配膳リズムメーター、ノートハイウェイ（球体＋コア）、ビートパッド（左=B* / 右=F*） |
+| — | HUD | **BACKBEAT DINER** ロゴ、半透明パネル、セッション／仕込み／提供バー、配膳リズムメーター、ノートハイウェイ（球体＋コア）、ビートパッド（左=B* / 右=F*）、C2 スナップ HUD |
 
 ### スクリーンショット（Play 時の見え方）
 
@@ -78,7 +79,7 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 
 シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
 再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow` / `ChartGapCoopWindow`）。
-チャート間隙（デモ 8s）で **スナップ推奨**／**Beat-B3「スナップ前」** 日本語プロンプト、CD 解除ブースト、UI pulse。
+チャート間隙（デモ 8s）で **スナップ推奨**／**Beat-B3「スナップ前」** 日本語プロンプト、ビート＋**C2** CD 解除ブースト、UI pulse。表 **Tab** 長押しで C2 送信 → 裏 **Snap-In**。
 
 ## フォルダ構成（`Assets/_Project/`）
 

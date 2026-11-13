@@ -1,3 +1,4 @@
+using BackbeatDiner.Coop;
 using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -55,6 +56,11 @@ namespace BackbeatDiner.Front
             }
 
             if (serveRhythm != null && serveRhythm.IsOpen)
+            {
+                return;
+            }
+
+            if (SnapshotSendController.FrontSnapshotBusy)
             {
                 return;
             }

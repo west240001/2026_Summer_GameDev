@@ -38,6 +38,23 @@ namespace BackbeatDiner.Front
             }
         }
 
+        /// <summary>KG-3 C2: copy frozen category names + levels for a snapshot payload.</summary>
+        public void CopyStockSnapshot(out string[] names, out float[] levels)
+        {
+            EnsureStock();
+            names = new string[CategoryNames.Length];
+            levels = new float[stock.Length];
+            for (var i = 0; i < CategoryNames.Length; i++)
+            {
+                names[i] = CategoryNames[i];
+            }
+
+            for (var i = 0; i < stock.Length; i++)
+            {
+                levels[i] = stock[i];
+            }
+        }
+
         public void BuildUi(RectTransform parent)
         {
             rowRoot = parent;

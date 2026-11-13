@@ -16,7 +16,7 @@ namespace BackbeatDiner.Coop
         private static readonly Color Teal = FrontHudController.Teal;
 
         private const string PromptTitle = "協力ウィンドウ";
-        private const string PromptSnap = "スナップ推奨 — 表はスナップショット送信の好機";
+        private const string PromptSnap = "スナップ推奨 — 表は Tab 長押し0.8sで C2 送信";
         private const string PromptB3 = "裏: Beat-B3「スナップ前」を送れ（D キー）";
 
         [SerializeField] private float pulseHz = 2.2f;
@@ -25,6 +25,7 @@ namespace BackbeatDiner.Coop
         private BeatLexiconDemo _backBeats;
         private BeatLexiconDemo _frontBeats;
         private BeatReceivePulse _receivePulse;
+        private SnapshotSendController _snapshotSend;
 
         private GameObject _root;
         private CanvasGroup _group;
@@ -43,11 +44,13 @@ namespace BackbeatDiner.Coop
         public void Configure(
             BeatLexiconDemo backBeats,
             BeatLexiconDemo frontBeats,
-            BeatReceivePulse receivePulse = null)
+            BeatReceivePulse receivePulse = null,
+            SnapshotSendController snapshotSend = null)
         {
             _backBeats = backBeats;
             _frontBeats = frontBeats;
             _receivePulse = receivePulse;
+            _snapshotSend = snapshotSend;
             EnsureUi();
             SetVisible(false);
         }
@@ -75,6 +78,8 @@ namespace BackbeatDiner.Coop
             }
 
             UnlockAndBoost();
+            _snapshotSend?.SetGapPreferred(true);
+            _snapshotSend?.UnlockCooldown();
             _receivePulse?.TriggerPulse(2, "スナップ前");
             _backBeats?.PulsePad(2, boostHoldSeconds);
             SetVisible(true);
@@ -87,6 +92,7 @@ namespace BackbeatDiner.Coop
         public void EndGap()
         {
             _active = false;
+            _snapshotSend?.SetGapPreferred(false);
             if (_boostRoutine != null)
             {
                 StopCoroutine(_boostRoutine);
@@ -101,6 +107,7 @@ namespace BackbeatDiner.Coop
         {
             _backBeats?.UnlockCooldowns();
             _frontBeats?.UnlockCooldowns();
+            _snapshotSend?.UnlockCooldown();
             _boostUntil = Time.unscaledTime + boostHoldSeconds;
 
             if (_cdLine != null)

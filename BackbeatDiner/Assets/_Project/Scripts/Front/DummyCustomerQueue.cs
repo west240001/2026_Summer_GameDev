@@ -35,6 +35,34 @@ namespace BackbeatDiner.Front
             }
         }
 
+        /// <summary>KG-3 C2: Japanese one-liner for waiting customers (count + lowest patience).</summary>
+        public string BuildCustomerSummaryLine()
+        {
+            var active = 0;
+            var lowest = float.MaxValue;
+            for (var i = 0; i < _slots.Count; i++)
+            {
+                var slot = _slots[i];
+                if (slot.Root == null || !slot.Root.activeSelf)
+                {
+                    continue;
+                }
+
+                active++;
+                if (slot.Remaining < lowest)
+                {
+                    lowest = slot.Remaining;
+                }
+            }
+
+            if (active <= 0)
+            {
+                return "待ち客: 0";
+            }
+
+            return $"待ち客: {active}（最短残 {lowest:0}s）";
+        }
+
         public void Configure(Transform root, Material teal, Material gold, int count)
         {
             spawnRoot = root;

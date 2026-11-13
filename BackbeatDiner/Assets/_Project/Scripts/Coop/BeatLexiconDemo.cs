@@ -39,7 +39,8 @@ namespace BackbeatDiner.Coop
         public BeatPadKeyScheme KeyScheme => keyScheme;
         public float RemainingAnyCooldown => Mathf.Max(0f, _nextAnyReadyTime - Time.unscaledTime);
         public bool IsFrontSendLocked =>
-            role == BeatRole.Front && ServeRhythmWindow.FrontCommsSendLocked;
+            role == BeatRole.Front
+            && (ServeRhythmWindow.FrontCommsSendLocked || SnapshotSendController.FrontSnapshotBusy);
         public bool IsAnyReady => Time.unscaledTime >= _nextAnyReadyTime && !IsFrontSendLocked;
 
         public void Configure(
@@ -133,8 +134,9 @@ namespace BackbeatDiner.Coop
 
             if (IsFrontSendLocked)
             {
-                Debug.Log("[BeatLexicon] Send blocked — 配膳リズム中 (FrontCommsSendLocked)");
-                SetStatus("送信ロック（配膳中）", FrontHudController.Gold);
+                var reason = SnapshotSendController.FrontSnapshotBusy ? "スナップ送信中" : "配膳中";
+                Debug.Log($"[BeatLexicon] Send blocked — {reason}");
+                SetStatus($"送信ロック（{reason}）", FrontHudController.Gold);
                 return false;
             }
 
@@ -247,7 +249,9 @@ namespace BackbeatDiner.Coop
             {
                 if (locked)
                 {
-                    cooldownLabel.text = "CD: 配膳ロック";
+                    cooldownLabel.text = SnapshotSendController.FrontSnapshotBusy
+                        ? "CD: スナップロック"
+                        : "CD: 配膳ロック";
                 }
                 else if (remain > 0f)
                 {

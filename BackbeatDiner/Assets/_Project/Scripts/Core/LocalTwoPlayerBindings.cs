@@ -10,10 +10,10 @@ namespace BackbeatDiner.Core
     public static class LocalTwoPlayerBindings
     {
         public const string HudHelp =
-            "【ローカル2P】裏: WASD+Space=ヒット / A·S·D·F=Beat-B1..B4　　表: Enter=クック→配膳 / J·K=配膳ヒット / ←↓→↑=Beat-F1..F4（配膳中は表送信ロック）";
+            "【ローカル2P】裏: WASD+Space=ヒット / A·S·D·F=Beat-B1..B4　　表: Enter=クック→配膳 / J·K=配膳ヒット / ←↓→↑=Beat-F1..F4 / Tab長押し=C2スナップ（配膳中は表送信ロック）";
 
         public const string HudBackHint =
-            "裏: WASD+Space = ヒット　　A / S / D / F = Beat-B1..B4";
+            "裏: WASD+Space = ヒット　　A / S / D / F = Beat-B1..B4　　C2受信=Snap-In";
 
         public const string HudFrontCookHint =
             "Enter = インスタントクック → 配膳リズム";
@@ -23,6 +23,9 @@ namespace BackbeatDiner.Core
 
         public const string HudFrontBeatHint =
             "表ビート: ←↓→↑ = F1..F4（8s / 同一20s・配膳中ロック）";
+
+        public const string HudFrontSnapHint =
+            "C2スナップ: Tab 長押し 0.8s → 送信 1.2s（CD 25s・間隙推奨）";
 
         public static bool WasBackHitPressed()
         {

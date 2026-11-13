@@ -20,9 +20,10 @@
 
 - **音声チャットなし**。意味の固定された **短いビートモチーフ**（C3 レキシコン）が主通信。
 - **C1/C2**：資源スナップショット要求・返送（時間コスト付き表操作）。
+- **C2 プロト**：表 **Tab 長押し 0.8s** → 送信 **1.2s** → 裏 **Snap-In SE**＋在庫／客パネル。CD **25s**（間隙推奨）。`SnapshotSendController` / `SnapshotReceivePanel`。
 - **受信は聴覚主**、HUDは最小（CD・種別バッジ）。Chart B 高密度・配膳ウィンドウ中は送信制限。
 - **C3 レキシコン**：Beat-B1..B4／F1..F4。CD **8s**／同一モチーフ **20s**。配膳中は表送信不可（`FrontCommsSendLocked`）。
-- **実装アンカー**：`Assets/_Project/Scripts/Coop/` — `BeatLexicon`（静的定義）、`BeatLexiconDemo`（パッド＋CD）、`BeatReceivePulse`。
+- **実装アンカー**：`Assets/_Project/Scripts/Coop/` — `BeatLexicon`（静的定義）、`BeatLexiconDemo`（パッド＋CD）、`BeatReceivePulse`、`SnapshotSendController` / `SnapshotReceivePanel`（C2）。
 
 ## KG-5 — 表（フロント）・調理・客
 
@@ -42,4 +43,4 @@
 
 Project Context: `docs/unity-production-plan.md` — パッケージ、フォルダマップ、週次プロト、**ネットワークは縦スライス後**。
 
-縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供、**ローカル2P キー分割** `LocalTwoPlayerBindings`：裏 WASD+Space / A·S·D·F=B*、表 Enter / J·K / 矢印=F*、配膳中は表コミュロック）。セットリスト間隙は `ChartGapCoopWindow`（**スナップ推奨**／Beat-B3 ヒント、CD 解除ブースト、UI pulse）。
+縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供、**ローカル2P キー分割** `LocalTwoPlayerBindings`：裏 WASD+Space / A·S·D·F=B*、表 Enter / J·K / 矢印=F* / **Tab=C2スナップ**、配膳中は表コミュロック）。セットリスト間隙は `ChartGapCoopWindow`（**スナップ推奨**／Beat-B3 ヒント、C2・ビート CD 解除ブースト、UI pulse）。
