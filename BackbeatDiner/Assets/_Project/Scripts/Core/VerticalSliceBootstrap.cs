@@ -90,7 +90,8 @@ namespace BackbeatDiner.Core
                 out var judgement, out var combo, out var bpmLabel,
                 out var prep, out var serve, out var timer, out var cookFeedback,
                 out var invRow, out var resultRoot, out var resultTitle, out var resultBody,
-                out var sessionFill, out var prepFill, out var serveFill, out var serveMeter);
+                out var sessionFill, out var prepFill, out var serveFill, out var serveMeter,
+                out var retryButton, out var titleButton);
 
             inventory.BuildUi(invRow);
             // Local 2P: Back WASD+Space hits stay live during Front serve (J·K).
@@ -98,6 +99,8 @@ namespace BackbeatDiner.Core
             hitInput.Window = JudgeWindow.Default;
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody,
                 sessionFill, prepFill, serveFill);
+            var resultOverlay = systems.AddComponent<ResultOverlayController>();
+            resultOverlay.Bind(session, resultRoot, retryButton, titleButton);
             serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true, serveMeter);
             cook.Configure(session, queue, cookFeedback, serveRhythm, twoPlayerSplit: true);
             // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
@@ -592,7 +595,9 @@ namespace BackbeatDiner.Core
             out Image sessionFill,
             out Image prepFill,
             out Image serveFill,
-            out Image serveMeter)
+            out Image serveMeter,
+            out Button retryButton,
+            out Button titleButton)
         {
             var canvasGo = GameObject.Find("VerticalSliceHUD");
             if (canvasGo == null)
@@ -688,23 +693,23 @@ namespace BackbeatDiner.Core
             if (resultRoot == null)
             {
                 resultRoot = EnsurePanel(canvasGo.transform, "ResultOverlay", new Vector2(0f, 0f), new Vector2(1f, 1f),
-                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.05f, 0.08f, 0.9f));
+                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.05f, 0.08f, 0.92f));
                 var rt = resultRoot.GetComponent<RectTransform>();
                 rt.offsetMin = Vector2.zero;
                 rt.offsetMax = Vector2.zero;
             }
+            else
+            {
+                var dim = resultRoot.GetComponent<Image>();
+                if (dim != null)
+                {
+                    dim.color = new Color(0.02f, 0.05f, 0.08f, 0.92f);
+                }
+            }
 
-            resultTitle = EnsureLabel(resultRoot.transform, "ResultTitle", "営業終了", Vector2.zero, TextAnchor.MiddleCenter, 48, Gold);
-            var titleRt = resultTitle.rectTransform;
-            titleRt.anchoredPosition = new Vector2(0f, 80f);
-            titleRt.sizeDelta = new Vector2(900f, 60f);
-
-            resultBody = EnsureLabel(resultRoot.transform, "ResultBody", "売上仮点数: 0", Vector2.zero, TextAnchor.MiddleCenter, 28, Teal);
-            var bodyRt = resultBody.rectTransform;
-            bodyRt.anchoredPosition = new Vector2(0f, -20f);
-            bodyRt.sizeDelta = new Vector2(900f, 220f);
-            resultBody.alignment = TextAnchor.UpperCenter;
-
+            // Raise above gameplay HUD chrome so buttons stay clickable.
+            resultRoot.transform.SetAsLastSibling();
+            ResultOverlayController.BuildPolishedUi(resultRoot, out resultTitle, out resultBody, out retryButton, out titleButton);
             resultRoot.SetActive(false);
         }
 

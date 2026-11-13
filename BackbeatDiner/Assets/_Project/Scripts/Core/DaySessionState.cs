@@ -8,7 +8,8 @@ namespace BackbeatDiner.Core
     /// <summary>
     /// Shared day-session resource counter for the vertical slice:
     /// back Perfect/Good → 仕込み (prepUnits); front Instant Cook/serve → 提供.
-    /// Ends after ~32 beats or 30 seconds with a 売上仮点数 overlay.
+    /// Ends after ~32 beats or 30 seconds; shows 営業終了 / 売上仮点数 / 仕込み・提供サマリ
+    /// and fires <see cref="OnSessionEnded"/> for ResultOverlay navigation.
     /// </summary>
     public sealed class DaySessionState : MonoBehaviour
     {
@@ -254,11 +255,12 @@ namespace BackbeatDiner.Core
             if (_resultBody != null)
             {
                 _resultBody.text =
-                    $"{reason}\n\n" +
-                    $"売上仮点数: {_salesScore}\n" +
+                    $"売上仮点数: {_salesScore}\n\n" +
+                    $"仕込み・提供サマリ\n" +
                     $"提供: {_servedCount}\n" +
                     $"残仕込み: {_prepUnits}\n" +
-                    $"経過: {_elapsed:0.0}s / ビート上限 {maxBeats}";
+                    $"経過: {_elapsed:0.0}s · ビート上限 {maxBeats}\n" +
+                    $"（{reason}）";
             }
 
             Debug.Log($"[DaySessionState] End ({reason}) sales={_salesScore} served={_servedCount} prepLeft={_prepUnits}");
