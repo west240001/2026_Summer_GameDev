@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -7,9 +8,8 @@ using UnityEngine.UI;
 namespace BackbeatDiner.Core
 {
     /// <summary>
-    /// End-of-day result overlay: 営業終了 / 売上仮点数 / 仕込み・提供サマリ,
-    /// with もう一度 (reload VerticalSlice) and タイトルへ (TitleMenu).
-    /// Enter = retry, Esc = title (optional shortcuts).
+    /// End-of-day result overlay (Cooking-sim JP): 営業終了 with clear 売上 / 提供,
+    /// then return to TitleMenu (Esc / タイトルへ / auto countdown). もう一度 reloads the slice.
     /// </summary>
     public sealed class ResultOverlayController : MonoBehaviour
     {
@@ -20,16 +20,31 @@ namespace BackbeatDiner.Core
 
         private const string VerticalSliceScene = "VerticalSlicePrototype";
         private const string TitleMenuScene = "TitleMenu";
+        private const float AutoTitleSeconds = 8f;
 
         [SerializeField] private string retrySceneName = VerticalSliceScene;
         [SerializeField] private string titleSceneName = TitleMenuScene;
+        [SerializeField] private float autoReturnSeconds = AutoTitleSeconds;
 
         private DaySessionState _session;
         private GameObject _resultRoot;
+        private Text _salesValue;
+        private Text _servesValue;
+        private Text _detailLabel;
+        private Text _countdownLabel;
         private bool _active;
         private bool _navigating;
+        private Coroutine _autoReturnRoutine;
 
-        public void Bind(DaySessionState session, GameObject resultRoot, Button retryButton, Button titleButton)
+        public void Bind(
+            DaySessionState session,
+            GameObject resultRoot,
+            Button retryButton,
+            Button titleButton,
+            Text salesValue = null,
+            Text servesValue = null,
+            Text detailLabel = null,
+            Text countdownLabel = null)
         {
             if (_session != null)
             {
@@ -38,8 +53,13 @@ namespace BackbeatDiner.Core
 
             _session = session;
             _resultRoot = resultRoot;
+            _salesValue = salesValue;
+            _servesValue = servesValue;
+            _detailLabel = detailLabel;
+            _countdownLabel = countdownLabel;
             _active = false;
             _navigating = false;
+            StopAutoReturn();
 
             if (_session != null)
             {
@@ -90,6 +110,7 @@ namespace BackbeatDiner.Core
             }
 
             _navigating = true;
+            StopAutoReturn();
             var target = string.IsNullOrWhiteSpace(retrySceneName) ? VerticalSliceScene : retrySceneName.Trim();
             Debug.Log("[BACKBEAT DINER] もう一度 — loading " + target);
             SceneManager.LoadScene(target, LoadSceneMode.Single);
@@ -103,6 +124,7 @@ namespace BackbeatDiner.Core
             }
 
             _navigating = true;
+            StopAutoReturn();
             var target = string.IsNullOrWhiteSpace(titleSceneName) ? TitleMenuScene : titleSceneName.Trim();
             Debug.Log("[BACKBEAT DINER] タイトルへ — loading " + target);
             SceneManager.LoadScene(target, LoadSceneMode.Single);
@@ -111,17 +133,79 @@ namespace BackbeatDiner.Core
         private void HandleSessionEnded()
         {
             _active = true;
-            if (_resultRoot != null && !_resultRoot.activeSelf)
+            RefreshStatsFromSession();
+
+            if (_resultRoot != null)
             {
                 _resultRoot.SetActive(true);
+                _resultRoot.transform.SetAsLastSibling();
             }
 
             EnsureEventSystem();
-            Debug.Log("[ResultOverlay] 営業終了 overlay armed — Enter=もう一度 Esc=タイトルへ");
+            StopAutoReturn();
+            _autoReturnRoutine = StartCoroutine(AutoReturnToTitle());
+            Debug.Log("[ResultOverlay] 営業終了 — 売上/提供表示 · Esc=タイトルへ Enter=もう一度");
+        }
+
+        private void RefreshStatsFromSession()
+        {
+            if (_session == null)
+            {
+                return;
+            }
+
+            if (_salesValue != null)
+            {
+                _salesValue.text = _session.SalesScore.ToString("N0");
+            }
+
+            if (_servesValue != null)
+            {
+                _servesValue.text = _session.ServedCount.ToString("N0");
+            }
+
+            if (_detailLabel != null)
+            {
+                var reason = string.IsNullOrWhiteSpace(_session.EndReason) ? "営業終了" : _session.EndReason;
+                _detailLabel.text = $"残仕込み {_session.PrepUnits}　·　{reason}";
+            }
+        }
+
+        private IEnumerator AutoReturnToTitle()
+        {
+            var remain = Mathf.Max(1f, autoReturnSeconds);
+            while (remain > 0f && !_navigating)
+            {
+                if (_countdownLabel != null)
+                {
+                    _countdownLabel.text = $"{Mathf.CeilToInt(remain)}秒後にタイトルへ";
+                }
+
+                yield return null;
+                remain -= Time.unscaledDeltaTime;
+            }
+
+            _autoReturnRoutine = null;
+            if (!_navigating)
+            {
+                GoToTitle();
+            }
+        }
+
+        private void StopAutoReturn()
+        {
+            if (_autoReturnRoutine == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_autoReturnRoutine);
+            _autoReturnRoutine = null;
         }
 
         private void OnDestroy()
         {
+            StopAutoReturn();
             if (_session != null)
             {
                 _session.OnSessionEnded -= HandleSessionEnded;
@@ -140,15 +224,19 @@ namespace BackbeatDiner.Core
             es.AddComponent<InputSystemUIInputModule>();
         }
 
-        /// <summary>Build polished result card + buttons under an existing fullscreen dim root.</summary>
+        /// <summary>
+        /// Build Cooking-sim result card: big 売上 / 提供, detail line, タイトルへ (primary) + もう一度.
+        /// </summary>
         public static void BuildPolishedUi(
             GameObject resultRoot,
             out Text resultTitle,
             out Text resultBody,
             out Button retryButton,
-            out Button titleButton)
+            out Button titleButton,
+            out Text salesValue,
+            out Text servesValue,
+            out Text countdownLabel)
         {
-            // Clear leftover children from an older minimal overlay so rebuild stays clean.
             for (var i = resultRoot.transform.childCount - 1; i >= 0; i--)
             {
                 Object.DestroyImmediate(resultRoot.transform.GetChild(i).gameObject);
@@ -161,7 +249,7 @@ namespace BackbeatDiner.Core
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(780f, 560f),
+                new Vector2(820f, 600f),
                 CookingSimHud.PanelBg);
 
             var cardOutline = card.AddComponent<Outline>();
@@ -174,40 +262,113 @@ namespace BackbeatDiner.Core
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 150f),
-                new Vector2(180f, 3f),
+                new Vector2(0f, 196f),
+                new Vector2(200f, 3f),
                 new Color(Gold.r, Gold.g, Gold.b, 0.9f));
 
             resultTitle = CreateLabel(card.transform, "ResultTitle", "営業終了",
-                new Vector2(0f, 200f), 56, CookingSimHud.Gold, FontStyle.Bold);
+                new Vector2(0f, 236f), 54, CookingSimHud.Gold, FontStyle.Bold);
             resultTitle.alignment = TextAnchor.MiddleCenter;
-            resultTitle.rectTransform.sizeDelta = new Vector2(700f, 70f);
+            resultTitle.rectTransform.sizeDelta = new Vector2(740f, 64f);
 
-            resultBody = CreateLabel(card.transform, "ResultBody",
-                "売上仮点数: 0\n\n仕込み・提供サマリ\n提供: 0\n残仕込み: 0",
-                new Vector2(0f, 24f), 28, CookingSimHud.Cream, FontStyle.Normal);
-            resultBody.alignment = TextAnchor.UpperCenter;
-            resultBody.rectTransform.sizeDelta = new Vector2(660f, 240f);
-            resultBody.lineSpacing = 1.2f;
+            var salesPanel = CreatePanel(
+                card.transform,
+                "SalesStat",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-190f, 40f),
+                new Vector2(320f, 200f),
+                CookingSimHud.PanelBgSoft);
+            var salesOutline = salesPanel.AddComponent<Outline>();
+            salesOutline.effectColor = CookingSimHud.BorderGold;
+            salesOutline.effectDistance = new Vector2(2f, -2f);
+
+            var salesCaption = CreateLabel(salesPanel.transform, "SalesCaption", "売上",
+                new Vector2(0f, 58f), 26, CookingSimHud.Gold, FontStyle.Bold);
+            salesCaption.alignment = TextAnchor.MiddleCenter;
+            salesCaption.rectTransform.sizeDelta = new Vector2(280f, 36f);
+
+            salesValue = CreateLabel(salesPanel.transform, "SalesValue", "0",
+                new Vector2(0f, -8f), 64, CookingSimHud.White, FontStyle.Bold);
+            salesValue.alignment = TextAnchor.MiddleCenter;
+            salesValue.rectTransform.sizeDelta = new Vector2(300f, 80f);
+
+            var salesUnit = CreateLabel(salesPanel.transform, "SalesUnit", "仮点数",
+                new Vector2(0f, -72f), 18, CookingSimHud.Cream, FontStyle.Normal);
+            salesUnit.alignment = TextAnchor.MiddleCenter;
+            salesUnit.rectTransform.sizeDelta = new Vector2(280f, 28f);
+
+            var servesPanel = CreatePanel(
+                card.transform,
+                "ServesStat",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(190f, 40f),
+                new Vector2(320f, 200f),
+                CookingSimHud.PanelBgSoft);
+            var servesOutline = servesPanel.AddComponent<Outline>();
+            servesOutline.effectColor = CookingSimHud.BorderTeal;
+            servesOutline.effectDistance = new Vector2(2f, -2f);
+
+            var servesCaption = CreateLabel(servesPanel.transform, "ServesCaption", "提供",
+                new Vector2(0f, 58f), 26, CookingSimHud.Teal, FontStyle.Bold);
+            servesCaption.alignment = TextAnchor.MiddleCenter;
+            servesCaption.rectTransform.sizeDelta = new Vector2(280f, 36f);
+
+            servesValue = CreateLabel(servesPanel.transform, "ServesValue", "0",
+                new Vector2(0f, -8f), 64, CookingSimHud.White, FontStyle.Bold);
+            servesValue.alignment = TextAnchor.MiddleCenter;
+            servesValue.rectTransform.sizeDelta = new Vector2(300f, 80f);
+
+            var servesUnit = CreateLabel(servesPanel.transform, "ServesUnit", "杯",
+                new Vector2(0f, -72f), 18, CookingSimHud.Cream, FontStyle.Normal);
+            servesUnit.alignment = TextAnchor.MiddleCenter;
+            servesUnit.rectTransform.sizeDelta = new Vector2(280f, 28f);
+
+            resultBody = CreateLabel(card.transform, "ResultBody", "残仕込み 0",
+                new Vector2(0f, -100f), 22, CookingSimHud.Cream, FontStyle.Normal);
+            resultBody.alignment = TextAnchor.MiddleCenter;
+            resultBody.rectTransform.sizeDelta = new Vector2(700f, 36f);
+
+            // Primary: return to TitleMenu
+            titleButton = CreateActionButton(
+                card.transform,
+                "TitleButton",
+                "タイトルへ",
+                new Vector2(-150f, -178f),
+                faceGold: true);
 
             retryButton = CreateActionButton(
                 card.transform,
                 "RetryButton",
                 "もう一度",
-                new Vector2(-150f, -170f),
-                faceGold: true);
-
-            titleButton = CreateActionButton(
-                card.transform,
-                "TitleButton",
-                "タイトルへ",
-                new Vector2(150f, -170f),
+                new Vector2(150f, -178f),
                 faceGold: false);
 
-            var hint = CreateLabel(card.transform, "ResultHint", "Enter = もう一度　/　Esc = タイトルへ",
-                new Vector2(0f, -230f), 15, new Color(Teal.r, Teal.g, Teal.b, 0.85f), FontStyle.Normal);
+            countdownLabel = CreateLabel(card.transform, "ResultCountdown",
+                $"{Mathf.CeilToInt(AutoTitleSeconds)}秒後にタイトルへ",
+                new Vector2(0f, -236f), 16, new Color(Teal.r, Teal.g, Teal.b, 0.9f), FontStyle.Normal);
+            countdownLabel.alignment = TextAnchor.MiddleCenter;
+            countdownLabel.rectTransform.sizeDelta = new Vector2(560f, 28f);
+
+            var hint = CreateLabel(card.transform, "ResultHint", "Esc = タイトルへ　/　Enter = もう一度",
+                new Vector2(0f, -266f), 14, new Color(CookingSimHud.Cream.r, CookingSimHud.Cream.g, CookingSimHud.Cream.b, 0.7f), FontStyle.Normal);
             hint.alignment = TextAnchor.MiddleCenter;
-            hint.rectTransform.sizeDelta = new Vector2(560f, 28f);
+            hint.rectTransform.sizeDelta = new Vector2(560f, 24f);
+        }
+
+        /// <summary>Legacy signature used by older callers — builds polished UI and discards extra outs.</summary>
+        public static void BuildPolishedUi(
+            GameObject resultRoot,
+            out Text resultTitle,
+            out Text resultBody,
+            out Button retryButton,
+            out Button titleButton)
+        {
+            BuildPolishedUi(resultRoot, out resultTitle, out resultBody, out retryButton, out titleButton,
+                out _, out _, out _);
         }
 
         private static Button CreateActionButton(
@@ -232,7 +393,7 @@ namespace BackbeatDiner.Core
             img.color = face;
 
             var outline = go.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 0.92f, 0.55f, faceGold ? 0.4f : 0.2f);
+            outline.effectColor = new Color(1f, 0.92f, 0.55f, faceGold ? 0.45f : 0.2f);
             outline.effectDistance = new Vector2(1.5f, -1.5f);
 
             var button = go.AddComponent<Button>();
@@ -304,8 +465,7 @@ namespace BackbeatDiner.Core
             text.fontSize = fontSize;
             text.color = color;
             text.fontStyle = style;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                        ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = CookingSimHud.UiFont();
             text.raycastTarget = false;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;

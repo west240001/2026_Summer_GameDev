@@ -153,7 +153,8 @@ namespace BackbeatDiner.Core
                 out var prep, out var serve, out var timer, out var cookFeedback,
                 out var invRow, out var resultRoot, out var resultTitle, out var resultBody,
                 out var sessionFill, out var prepFill, out var serveFill, out var serveMeter,
-                out var retryButton, out var titleButton, out var chartNameLabel);
+                out var retryButton, out var titleButton, out var chartNameLabel,
+                out var resultSalesValue, out var resultServesValue, out var resultCountdown);
 
             inventory.BuildUi(invRow);
             // Role bindings stay split-style so solo F8 can drive either side's keys.
@@ -162,7 +163,8 @@ namespace BackbeatDiner.Core
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody,
                 sessionFill, prepFill, serveFill);
             var resultOverlay = systems.AddComponent<ResultOverlayController>();
-            resultOverlay.Bind(session, resultRoot, retryButton, titleButton);
+            resultOverlay.Bind(session, resultRoot, retryButton, titleButton,
+                resultSalesValue, resultServesValue, resultBody, resultCountdown);
             serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true, serveMeter);
             cook.Configure(session, queue, cookFeedback, serveRhythm, twoPlayerSplit: true);
             // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
@@ -1179,7 +1181,10 @@ namespace BackbeatDiner.Core
             out Image serveMeter,
             out Button retryButton,
             out Button titleButton,
-            out Text chartNameLabel)
+            out Text chartNameLabel,
+            out Text resultSalesValue,
+            out Text resultServesValue,
+            out Text resultCountdown)
         {
             var canvas = CookingSimHud.EnsureOverlayCanvas("VerticalSliceHUD", 20);
             var root = canvas.transform;
@@ -1320,7 +1325,15 @@ namespace BackbeatDiner.Core
             }
 
             resultRoot.transform.SetAsLastSibling();
-            ResultOverlayController.BuildPolishedUi(resultRoot, out resultTitle, out resultBody, out retryButton, out titleButton);
+            ResultOverlayController.BuildPolishedUi(
+                resultRoot,
+                out resultTitle,
+                out resultBody,
+                out retryButton,
+                out titleButton,
+                out resultSalesValue,
+                out resultServesValue,
+                out resultCountdown);
             resultRoot.SetActive(false);
         }
 

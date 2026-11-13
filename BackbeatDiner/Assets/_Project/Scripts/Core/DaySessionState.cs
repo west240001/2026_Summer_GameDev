@@ -8,8 +8,8 @@ namespace BackbeatDiner.Core
     /// <summary>
     /// Shared day-session resource counter for the vertical slice:
     /// back Perfect/Good → 仕込み (prepUnits); front Instant Cook/serve → 提供.
-    /// Ends after ~32 beats or 30 seconds; shows 営業終了 / 売上仮点数 / 仕込み・提供サマリ
-    /// and fires <see cref="OnSessionEnded"/> for ResultOverlay navigation.
+    /// Ends after ~32 beats or 30 seconds (or setlist Chart B); shows 営業終了 with 売上 / 提供
+    /// and fires <see cref="OnSessionEnded"/> for ResultOverlay → TitleMenu.
     /// </summary>
     public sealed class DaySessionState : MonoBehaviour
     {
@@ -42,6 +42,7 @@ namespace BackbeatDiner.Core
         private bool _running;
         private bool _chartCompleteLatched;
         private bool _networkFollower;
+        private string _endReason = string.Empty;
 
         public int PrepUnits => _prepUnits;
         public int ServedCount => _servedCount;
@@ -49,6 +50,7 @@ namespace BackbeatDiner.Core
         public bool IsEnded => _ended;
         public bool IsRunning => _running && !_ended;
         public int MaxBeats => maxBeats;
+        public string EndReason => _endReason;
 
         public event Action OnSessionEnded;
 
@@ -178,6 +180,7 @@ namespace BackbeatDiner.Core
             _ended = false;
             _running = true;
             _chartCompleteLatched = false;
+            _endReason = string.Empty;
             if (_resultRoot != null)
             {
                 _resultRoot.SetActive(false);
@@ -363,6 +366,7 @@ namespace BackbeatDiner.Core
 
             _ended = true;
             _running = false;
+            _endReason = string.IsNullOrWhiteSpace(reason) ? "営業終了" : reason.Trim();
             if (_clock != null)
             {
                 _clock.StopClock();
@@ -383,15 +387,12 @@ namespace BackbeatDiner.Core
                 _resultTitle.text = "営業終了";
             }
 
+            // Fallback body when ResultOverlayController is absent; polished overlay overwrites stats.
             if (_resultBody != null)
             {
                 _resultBody.text =
-                    $"売上仮点数: {_salesScore}\n\n" +
-                    $"仕込み・提供サマリ\n" +
-                    $"提供: {_servedCount}\n" +
-                    $"残仕込み: {_prepUnits}\n" +
-                    $"経過: {_elapsed:0.0}s · ビート上限 {maxBeats}\n" +
-                    $"（{reason}）";
+                    $"売上 {_salesScore}　·　提供 {_servedCount}\n" +
+                    $"残仕込み {_prepUnits}　·　{reason}";
             }
 
             Debug.Log($"[DaySessionState] End ({reason}) sales={_salesScore} served={_servedCount} prepLeft={_prepUnits}");
