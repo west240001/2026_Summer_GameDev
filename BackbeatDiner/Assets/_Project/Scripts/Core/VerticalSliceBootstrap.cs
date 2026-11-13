@@ -60,6 +60,8 @@ namespace BackbeatDiner.Core
             var serveRhythm = systems.AddComponent<ServeRhythmWindow>();
             var backBeats = systems.AddComponent<BeatLexiconDemo>();
             var frontBeats = systems.AddComponent<BeatLexiconDemo>();
+            var receivePulse = systems.AddComponent<BeatReceivePulse>();
+            var gapCoop = systems.AddComponent<ChartGapCoopWindow>();
 
             if (metronomeClick == null)
             {
@@ -132,16 +134,19 @@ namespace BackbeatDiner.Core
             // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
             backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
             frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
+            // Gap coop: スナップ推奨 / Beat-B3 hint + brief CD unlock + pulse
+            receivePulse.Configure(autoSimulate: false, tutorialToast: false);
+            gapCoop.Configure(backBeats, frontBeats, receivePulse);
 
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
             {
                 var runner = systems.AddComponent<DaySetlistRunner>();
-                runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel);
+                runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel, gapCoop);
                 runner.StartSetlist(0.35);
                 Debug.Log(
                     $"[BACKBEAT DINER] VerticalSlicePrototype ready — setlist={setlist.name} " +
-                    $"charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; kitchen BACK + diner FRONT; local 2P.");
+                    $"charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; kitchen BACK + diner FRONT; local 2P; gap coop window.");
             }
             else
             {

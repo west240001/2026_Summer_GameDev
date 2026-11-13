@@ -1,4 +1,5 @@
 using System.Collections;
+using BackbeatDiner.Coop;
 using BackbeatDiner.Rhythm;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,7 @@ namespace BackbeatDiner.Core
     /// Plays a <see cref="SetlistDefinition"/> on the vertical slice:
     /// Chart A → kitchen gap → Chart B → … then ends the day session.
     /// Japanese HUD shows チャート名 (and 間隙 during gaps).
+    /// Gap opens <see cref="ChartGapCoopWindow"/> (スナップ推奨 / Beat-B3).
     /// </summary>
     public sealed class DaySetlistRunner : MonoBehaviour
     {
@@ -19,6 +21,7 @@ namespace BackbeatDiner.Core
         private DaySessionState _session;
         private HitInput _hitInput;
         private Text _chartNameLabel;
+        private ChartGapCoopWindow _coopWindow;
 
         private int _index;
         private bool _inGap;
@@ -37,7 +40,8 @@ namespace BackbeatDiner.Core
             NoteHighway noteHighway,
             DaySessionState daySession,
             HitInput hit,
-            Text chartNameHud)
+            Text chartNameHud,
+            ChartGapCoopWindow coopWindow = null)
         {
             setlist = definition;
             _clock = rhythmClock;
@@ -45,6 +49,7 @@ namespace BackbeatDiner.Core
             _session = daySession;
             _hitInput = hit;
             _chartNameLabel = chartNameHud;
+            _coopWindow = coopWindow;
 
             if (_session != null)
             {
@@ -69,6 +74,8 @@ namespace BackbeatDiner.Core
                 StopCoroutine(_gapRoutine);
                 _gapRoutine = null;
             }
+
+            _coopWindow?.EndGap();
 
             _index = FirstValidIndex(0);
             if (_index < 0)
@@ -147,11 +154,13 @@ namespace BackbeatDiner.Core
 
             var gap = setlist.GapSeconds;
             Debug.Log($"[DaySetlistRunner] Gap {gap:0.#}s → next {nextChart.DisplayName}");
+            _coopWindow?.BeginGap(gap, nextChart != null ? nextChart.DisplayName : null);
             if (gap > 0f)
             {
                 yield return new WaitForSeconds(gap);
             }
 
+            _coopWindow?.EndGap();
             _index = nextIndex;
             _inGap = false;
             _gapRoutine = null;

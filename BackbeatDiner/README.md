@@ -77,7 +77,8 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 左右分割のゲーム画面。**左半分**は暗いネイビーのキッチン／リズムステーション：市松フロア、カウンター、A·S·D·F パッド、ゴールドのヒットラインへ向かうノートハイウェイ、ペンダントランプのソフト点光。**右半分**はダイナーフロア：ブース席・テーブル・キッチンパス壁のパス窓、サービスカウンター、客キュー。画面中央上に **BACKBEAT DINER**／「バックビート・ダイナー」、左パネルに判定・コンボ・BPM、右パネルに仕込み／提供と配膳メーター、下部にローカル2Pヘルプ帯。フォグと暖色キーライト＋ティール寄りのフィルでローポリ空間に空気感を出す。
 
 シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
-再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow`）。
+再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow` / `ChartGapCoopWindow`）。
+チャート間隙（デモ 8s）で **スナップ推奨**／**Beat-B3「スナップ前」** 日本語プロンプト、CD 解除ブースト、UI pulse。
 
 ## フォルダ構成（`Assets/_Project/`）
 

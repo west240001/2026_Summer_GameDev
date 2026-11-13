@@ -33,6 +33,7 @@ namespace BackbeatDiner.Coop
         private Text[] _padLabels;
         private Image[] _padBgs;
         private Text _statusLabel;
+        private Coroutine _padPulseRoutine;
 
         public BeatRole Role => role;
         public BeatPadKeyScheme KeyScheme => keyScheme;
@@ -174,6 +175,62 @@ namespace BackbeatDiner.Coop
         public float RemainingMotifCooldown(BeatId id)
         {
             return Mathf.Max(0f, _nextMotifReadyTime[(int)id] - Time.unscaledTime);
+        }
+
+        /// <summary>Chart-gap coop: clear any/same-motif CD so Beat-B3 / snaps can fire immediately.</summary>
+        public void UnlockCooldowns()
+        {
+            _nextAnyReadyTime = 0f;
+            for (var i = 0; i < _nextMotifReadyTime.Length; i++)
+            {
+                _nextMotifReadyTime[i] = 0f;
+            }
+
+            SetStatus("間隙ブースト: CD解除", FrontHudController.Teal);
+            RefreshCooldownHud();
+            RefreshPadUi();
+        }
+
+        /// <summary>Brief pad highlight (e.g. Beat-B3 during gap coop window).</summary>
+        public void PulsePad(int padIndex, float durationSeconds = 2.5f)
+        {
+            if (padIndex < 0 || padIndex > 3)
+            {
+                return;
+            }
+
+            if (_padPulseRoutine != null)
+            {
+                StopCoroutine(_padPulseRoutine);
+            }
+
+            _padPulseRoutine = StartCoroutine(PulsePadRoutine(padIndex, Mathf.Max(0.2f, durationSeconds)));
+        }
+
+        private System.Collections.IEnumerator PulsePadRoutine(int padIndex, float duration)
+        {
+            var end = Time.unscaledTime + duration;
+            while (Time.unscaledTime < end)
+            {
+                if (_padBgs != null && padIndex < _padBgs.Length && _padBgs[padIndex] != null)
+                {
+                    var t = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f);
+                    _padBgs[padIndex].color = Color.Lerp(
+                        new Color(0.08f, 0.22f, 0.22f, 0.9f),
+                        new Color(0.35f, 0.28f, 0.06f, 0.95f),
+                        t);
+                }
+
+                if (_padLabels != null && padIndex < _padLabels.Length && _padLabels[padIndex] != null)
+                {
+                    _padLabels[padIndex].color = FrontHudController.Gold;
+                }
+
+                yield return null;
+            }
+
+            _padPulseRoutine = null;
+            RefreshPadUi();
         }
 
         private void RefreshCooldownHud()

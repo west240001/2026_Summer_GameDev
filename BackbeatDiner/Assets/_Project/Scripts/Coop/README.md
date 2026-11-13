@@ -3,8 +3,9 @@
 | Script | Role |
 |--------|------|
 | `BeatLexicon` | Static defs **Beat-B1..B4 / Beat-F1..F4**（日本語ラベル・SE 周波数）。CD 定数 **8s** any / **20s** same-motif |
-| `BeatLexiconDemo` | Pad keys via `BeatPadKeyScheme`：solo **1–4**、縦スライス裏 **A/S/D/F**、表 **←↓→↑**。日本語パッド UI。**表のみ** `FrontCommsSendLocked` でブロック。`MotifSent` / `BeatSent` |
+| `BeatLexiconDemo` | Pad keys via `BeatPadKeyScheme`：solo **1–4**、縦スライス裏 **A/S/D/F**、表 **←↓→↑**。日本語パッド UI。**表のみ** `FrontCommsSendLocked` でブロック。`MotifSent` / `BeatSent`。間隙用 `UnlockCooldowns` / `PulsePad` |
 | `BeatReceivePulse` | Edge pulse + optional waveform strip on motif / simulated back beat (**B** / auto); Japanese toast tutorial-only |
+| `ChartGapCoopWindow` | チャート間隙の協力ウィンドウ：日本語 **スナップ推奨** + **Beat-B3「スナップ前」** ヒント、CD 解除ブースト、バナー／パッド pulse。`DaySetlistRunner` → VerticalSlice |
 
 ## Pad labels（v1）
 

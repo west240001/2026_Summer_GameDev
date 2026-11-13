@@ -38,6 +38,13 @@ namespace BackbeatDiner.Coop
             BeatLexiconDemo.MotifSent -= OnMotifSent;
         }
 
+        public void Configure(bool autoSimulate = false, bool tutorialToast = true, bool waveform = true)
+        {
+            autoSimulateBackBeat = autoSimulate;
+            showTutorialToast = tutorialToast;
+            showWaveformStrip = waveform;
+        }
+
         private void Start()
         {
             EnsureUi();
