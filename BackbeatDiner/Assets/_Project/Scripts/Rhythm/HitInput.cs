@@ -71,9 +71,20 @@ namespace BackbeatDiner.Rhythm
 
         public void BindFeedback(HitJudgeFeedback judgeFeedback = null, Transform feedbackHudRoot = null)
         {
-            feedback = judgeFeedback != null
-                ? judgeFeedback
-                : gameObject.GetComponent<HitJudgeFeedback>() ?? gameObject.AddComponent<HitJudgeFeedback>();
+            if (judgeFeedback != null)
+            {
+                feedback = judgeFeedback;
+            }
+            else
+            {
+                // Unity == null (not ??): destroyed HitJudgeFeedback is fake-null for C# ??.
+                feedback = gameObject.GetComponent<HitJudgeFeedback>();
+                if (feedback == null)
+                {
+                    feedback = gameObject.AddComponent<HitJudgeFeedback>();
+                }
+            }
+
             var audio = gameObject.GetComponent<AudioSource>();
             feedback.Configure(judgementText, audio, feedbackHudRoot);
         }

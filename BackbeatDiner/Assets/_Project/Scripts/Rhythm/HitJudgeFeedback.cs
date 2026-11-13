@@ -189,6 +189,7 @@ namespace BackbeatDiner.Rhythm
 
         private void EnsurePopup(Transform hudRoot)
         {
+            // Unity overloaded == : destroyed Text is "null" here; C# ?? would not treat it as null.
             if (_popup != null)
             {
                 return;
@@ -200,18 +201,41 @@ namespace BackbeatDiner.Rhythm
                 hudRoot = canvas.transform;
             }
 
-            var existing = hudRoot.Find("HitJudgePopup");
-            GameObject go;
-            if (existing == null)
+            // Do not use `??` with GetComponent — Unity "fake null" destroyed CanvasGroup/Text/Outline
+            // are non-null for C# `??`, skip AddComponent, then throw MissingComponentException on use
+            // (same class of bug as SurveillanceCamera; aborts VerticalSliceBootstrap before StartSetlist).
+            var existing = hudRoot != null ? hudRoot.Find("HitJudgePopup") : null;
+            GameObject go = null;
+            if (existing != null)
+            {
+                go = existing.gameObject;
+                var text = go.GetComponent<Text>();
+                var group = go.GetComponent<CanvasGroup>();
+                if (text == null || group == null)
+                {
+                    go.name = "HitJudgePopup_Stale";
+                    Destroy(go);
+                    go = null;
+                }
+                else
+                {
+                    _popup = text;
+                    _popupGroup = group;
+                    _popupOutline = go.GetComponent<Outline>();
+                    if (_popupOutline == null)
+                    {
+                        _popupOutline = go.AddComponent<Outline>();
+                    }
+                }
+            }
+
+            if (go == null)
             {
                 go = new GameObject("HitJudgePopup");
                 go.transform.SetParent(hudRoot, false);
                 _popup = go.AddComponent<Text>();
-            }
-            else
-            {
-                go = existing.gameObject;
-                _popup = go.GetComponent<Text>() ?? go.AddComponent<Text>();
+                _popupOutline = go.AddComponent<Outline>();
+                _popupGroup = go.AddComponent<CanvasGroup>();
             }
 
             _popup.font = CookingSimHud.UiFont();
@@ -230,12 +254,10 @@ namespace BackbeatDiner.Rhythm
             _popupRt.anchoredPosition = new Vector2(0f, 40f);
             _popupRt.sizeDelta = new Vector2(720f, 120f);
 
-            _popupOutline = go.GetComponent<Outline>() ?? go.AddComponent<Outline>();
             _popupOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
             _popupOutline.effectDistance = new Vector2(3f, -3f);
             _popupOutline.useGraphicAlpha = true;
 
-            _popupGroup = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
             _popupGroup.alpha = 0f;
             _popupGroup.blocksRaycasts = false;
             _popupGroup.interactable = false;

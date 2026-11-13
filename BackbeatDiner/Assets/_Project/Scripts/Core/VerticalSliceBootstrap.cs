@@ -159,9 +159,19 @@ namespace BackbeatDiner.Core
             inventory.BuildUi(invRow);
             // Role bindings stay split-style so solo F8 can drive either side's keys.
             // Hit judge: JP popup + procedural SFX on back lane (Cooking-sim ticket kept).
-            var hitFeedback = systems.AddComponent<HitJudgeFeedback>();
-            hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true,
-                hitFeedback, _hudRoot);
+            // try/catch so HitJudgePopup CanvasGroup fake-null cannot abort Start before StartSetlist.
+            try
+            {
+                var hitFeedback = systems.AddComponent<HitJudgeFeedback>();
+                hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true,
+                    hitFeedback, _hudRoot);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[HitJudge] Configure failed (notes still start): {ex.Message}");
+                hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true);
+            }
+
             hitInput.Window = JudgeWindow.Default;
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody,
                 sessionFill, prepFill, serveFill);
