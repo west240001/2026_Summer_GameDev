@@ -9,7 +9,7 @@
 | `DummyCustomerQueue` | ローポリ客 1〜3＋タイムアウトバー（`TryServeOldest` 対応） |
 | `InventoryBar` | 偽在庫カテゴリ（teal / gold）。`CopyStockSnapshot` で C2 用凍結データ |
 | `InstantCookInput` | Instant Cook → `ServeRhythmWindow`。solo: F/Enter；縦スライス2P: **Enter** のみ。C2 送信中はロック |
-| `ServeRhythmWindow` | **F1+ / S1**：dsp 拍判定。solo: Space/J·K；縦スライス2P: **J·K**（裏ヒット継続）。開いている間 `FrontCommsSendLocked`（表ビート／C2） |
+| `ServeRhythmWindow` | **F1+ / S1**：dsp 拍判定。solo: Space/J·K；縦スライス表全画面: **J·K**。開いている間 `FrontCommsSendLocked`（表ビート／C2） |
 
 シーン: `Assets/_Project/Scenes/FrontShellPrototype.unity` / 縦スライスは `VerticalSlicePrototype.unity`  
 メニュー: **BACKBEAT DINER → Build Front Shell Prototype Scene** / **Build Vertical Slice Prototype Scene**

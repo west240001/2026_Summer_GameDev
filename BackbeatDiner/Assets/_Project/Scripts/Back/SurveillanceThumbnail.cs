@@ -254,11 +254,11 @@ namespace BackbeatDiner.Back
             bg.color = PanelBg;
             bg.raycastTarget = false;
             var rt = bg.rectTransform;
-            // Back half, lower-right of left region — clear PiP with gold border
-            rt.anchorMin = new Vector2(0f, 0f);
-            rt.anchorMax = new Vector2(0f, 0f);
-            rt.pivot = new Vector2(0f, 0f);
-            rt.anchoredPosition = new Vector2(20f, 280f);
+            // Back fullscreen — lower-right PiP of Front floor
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-24f, 280f);
             rt.sizeDelta = new Vector2(320f, 210f);
 
             var outline = rootGo.GetComponent<Outline>() ?? rootGo.AddComponent<Outline>();

@@ -24,14 +24,14 @@
 7. **縦スライス（1チャート＋表ミニ）**: `Assets/_Project/Scenes/VerticalSlicePrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Vertical Slice Prototype Scene**、または batchmode で `VerticalSlicePrototypeSceneBuilder.BuildFromCommandLine`）。
 8. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
 
-## タイトルメニュー — 営業開始フロー（操作）
+## タイトルメニュー — 役選択 → 営業開始（操作）
 
-Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャッチコピー「見えない相棒と、最高の一皿を。」。**営業開始**で縦スライス日を開始します。
+Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャッチコピー「見えない相棒と、最高の一皿を。」。**2デバイス（各1画面）**前提で、端末ごとに役を選んで縦スライス日を開始します。
 
 | 操作 | 内容 |
 |------|------|
-| **営業開始**（クリック） | `VerticalSlicePrototype` をロード（1営業日縦スライス開始） |
-| **Enter** / **Space** | 同上（キーボードショートカット） |
+| **裏で始める**（クリック） / **1** | 裏役で `VerticalSlicePrototype` を全画面ロード |
+| **表で始める**（クリック） / **2** | 表役で同上 |
 
 シーン: `Assets/_Project/Scenes/TitleMenu.unity`（Build Settings **先頭**）  
 再生成: **BACKBEAT DINER → Build Title Menu Scene**（`TitleMenuController` / `TitleMenuSceneBuilder`）。
@@ -58,63 +58,48 @@ Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャ�
 
 ブランド色マテリアル: `Assets/_Project/Art/Materials/BrandGold.mat`（`#C9A227`）/ `BrandTeal.mat`（`#1A6B6B`）。再生成は **BACKBEAT DINER → Build Front Shell Prototype Scene**。
 
-## 縦スライス — 1チャート＋表ミニ（ローカル2P 操作）
+## 縦スライス — 1チャート＋表ミニ（2デバイス・役ごと全画面）
 
-左右スプリット（左＝裏リズムステーション / 右＝表ダイナーフロア）。共有資源は **仕込み**（裏ヒットで増加）と **提供**（表インスタントクック → **配膳リズム F1+** で消費）。キーボード左右分割（`LocalTwoPlayerBindings`）。ブランド色は Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33`（手続きマテリアルのみ）。
+**1モニター左右分割ではありません。** 端末（またはウィンドウ）ごとに **裏 or 表を1役だけ全画面** 表示します。共有資源は **仕込み**（裏ヒットで増加）と **提供**（表インスタントクック → **配膳リズム F1+** で消費）。`DaySessionState` / セットリストは各シーンでホストロジックとして常時動作。キー割当は `LocalTwoPlayerBindings`。ブランド色は Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33`。
 
 | 役 | 操作 | 内容 |
 |----|------|------|
-| **裏** | **WASD + Space**（Gamepad South） | レーンヒット（Perfect/Good → 仕込み +2/+1）。配膳中も継続可 |
-| **裏** | **A / S / D / F** | **Beat-B1..B4**（プッシュ／クリア／スナップ前／あとで）。CD 8s／同一20s |
-| **裏** | **Q** | **C1 クエスト要求**：表へ **Quest SE**＋日本語トースト／アイコン。CD **15s**（**ノーツ中ロック**） |
-| **表** | **Enter**（Gamepad West） | インスタントクック → **配膳リズム**（1〜2小節） |
+| **裏** | **WASD + Space**（Gamepad South） | レーンヒット（Perfect/Good → 仕込み +2/+1） |
+| **裏** | **A / S / D / F** | **Beat-B1..B4**。CD 8s／同一20s |
+| **裏** | **Q** | **C1 クエスト要求**（CD **15s**・ノーツ中ロック） |
+| **表** | **Enter**（Gamepad West） | インスタントクック → **配膳リズム** |
 | **表** | **J · K**（配膳中） | S1 拍合わせ。Perfect チップ×1.5 / Good×1 / Miss＝基本売上のみ |
-| **表** | **← ↓ → ↑** | **Beat-F1..F4**。**配膳中は表のみロック** — `FrontCommsSendLocked`。C1 応答は **←=F1 ビジー** |
-| **表** | **Tab 長押し** | **C2 スナップショット**：ホールド **0.8s** → 送信 **1.2s** → 裏に在庫／客パネル＋**Snap-In** SE。CD **25s**（**間隙推奨**・C1 応答可） |
-| — | 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
-| — | HUD | **BACKBEAT DINER** ロゴ、半透明パネル、セッション／仕込み／提供バー、配膳リズムメーター、ノートハイウェイ（球体＋コア）、ビートパッド（左=B* / 右=F*）、C2 スナップ HUD |
+| **表** | **← ↓ → ↑** | **Beat-F1..F4**（配膳中は表のみロック） |
+| **表** | **Tab 長押し** | **C2 スナップショット**（0.8s → 1.2s → CD 25s） |
+| — | **F8** | ソロ確認用に裏↔表の全画面ビューを切替 |
+| — | 終了 | 約 **32拍** または **30秒** で結果オーバーレイ |
 
-### スクリーンショット（Play 時の見え方）
+### 役の選び方
 
-左右分割のゲーム画面。**左半分**は暗いネイビーのキッチン／リズムステーション：市松フロア、カウンター、A·S·D·F パッド、ゴールドのヒットラインへ向かうノートハイウェイ、ペンダントランプのソフト点光。**右半分**はダイナーフロア：ブース席・テーブル・キッチンパス壁のパス窓、サービスカウンター、客キュー。画面中央上に **BACKBEAT DINER**／「バックビート・ダイナー」、左に注文票パネル、右にサービス盤＋在庫スロット＋大きな配膳メーター、下部にローカル2Pヘルプ帯。フォグと暖色キーライト＋ティール寄りのフィルでローポリ空間に空気感を出す。
+1. **TitleMenu**: **裏で始める** / **表で始める**（または **1** / **2**）
+2. **VerticalSlice を直接 Play**: 開始オーバーレイで同じ選択（1/2 またはボタン）
+3. **ソロ**: プレイ中 **F8** で表示役を切替（入力キーはそのまま両役分）
 
-### Vertical Slice HUD マップ（Cooking Simulator 風）
-
-共有スタイルは `CookingSimHud`（半透明ダークパネル + 白／ゴールド文字 + 太いラベル付きゲージ）。左右をはっきり分け、小さく散らかしたオーバーレイを避ける。
+### Vertical Slice HUD マップ（Cooking Simulator 風・単一役）
 
 ```
-┌─ 左 裏（注文票） ──────────┬SPLIT┬─ 右 表（サービス盤） ──────────┐
-│ 【注文票】裏・リズム        │     │ 【サービス】表・ダイナー        │
-│ 判定 / コンボ / BPM         │ 中央│ 仕込み・提供 + ラベル付きゲージ │
-│ C1 クエスト提示（Q）        │ セッション│ クック/配膳/ビート/C2 提示 │
-│ 監視 PiP（金枠・BLIND）     │ 進行│ 配膳リズムメーター（大）         │
-│ ビートパッド B1–B4（大）    │     │ 在庫スロット A–E（大）           │
-│ C1 CD パネル                │     │ ビートパッド F1–F4（大）         │
-│                             │     │ C2 スナップ送信パネル            │
-└─────────────────────────────┴─────┴────────────────────────────────┘
-│ 下部ヘルプ帯（ローカル2P 操作まとめ）                              │
-│ 中央オーバーレイ: チャート間隙バナー / 結果カード / タイトルへ      │
+【裏・全画面】キッチン＋注文票＋監視 PiP＋Bパッド＋C1
+【表・全画面】ダイナー＋サービス盤＋在庫＋配膳メーター＋Fパッド＋C2
+共有: ブランド / セッション進行 / 間隙バナー / 結果カード
 ```
 
 | 領域 | 主な UI | スクリプト |
 |------|---------|------------|
-| 左・注文票 | 判定・コンボ・BPM・C1 提示 | `VerticalSliceBootstrap.BuildHud` |
-| 左・監視 | 表フロア PiP + BLIND | `SurveillanceThumbnail` |
-| 左・パッド | A/S/D/F = Beat-B* | `BeatLexiconDemo` (Back) |
-| 左・C1 | Q クエスト CD | `QuestRequestController` |
-| 左・Snap-In | C2 受信パネル | `SnapshotReceivePanel` |
-| 中央 | ブランド / セッション進行 / 間隙バナー | `VerticalSliceBootstrap` / `ChartGapCoopWindow` |
-| 右・サービス | 仕込み・提供・配膳メーター | `DaySessionState` / `ServeRhythmWindow` |
-| 右・在庫 | カテゴリ A–E スロット | `InventoryBar` |
-| 右・パッド | ←↓→↑ = Beat-F* | `BeatLexiconDemo` (Front) |
-| 右・C2 | Tab 長押し送信 | `SnapshotSendController` |
-| 右・トースト | C1 受信トースト | `QuestReceiveToast` |
+| 裏・注文票 | 判定・コンボ・BPM・C1 | `VerticalSliceBootstrap` |
+| 裏・監視 | 表フロア PiP + BLIND | `SurveillanceThumbnail` |
+| 裏・パッド | A/S/D/F = Beat-B* | `BeatLexiconDemo` (Back) |
+| 表・サービス | 仕込み・提供・配膳メーター | `DaySessionState` / `ServeRhythmWindow` |
+| 表・パッド | ←↓→↑ = Beat-F* | `BeatLexiconDemo` (Front) |
+| 役選択 | タイトル / 開始オーバーレイ / F8 | `VerticalSliceRoleSelection` |
 | 結果 | 営業終了カード | `ResultOverlayController` |
-| タイトル | 営業開始 CTA | `TitleMenuController` |
 
 シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
-再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow` / `ChartGapCoopWindow`）。
-チャート間隙（デモ 8s）で **スナップ推奨**／**Beat-B3「スナップ前」**／**C1 Q** 日本語プロンプト、ビート＋**C1/C2** CD 解除ブースト、UI pulse。裏 **Q** で C1 → 表トースト；表 **Tab** 長押しで C2 送信 → 裏 **Snap-In**。
+再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**。
 
 ## フォルダ構成（`Assets/_Project/`）
 
@@ -134,8 +119,8 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 1. **Week 1 — リズム tick**（着手済み）: `RhythmClock` + メトロノーム WAV + `HitInput` / `NoteHighway` / `BeatLexicon`（Beat-B*）。シーン `RhythmPrototype`。
 2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse` / **Beat-F* パッド＋CD**。裏レーンは Week1 `RhythmPrototype` を併用。
 3. **ビート送信プロト**（着手済み）: KG-3 C3 **BeatLexicon**（B1..F4 静的定義、8s／同一20s CD、日本語パッド、配膳中ロック）。
-4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — 裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`（仕込み/提供）、結果オーバーレイ。
-5. **タイトル → 営業開始**（着手済み）: `TitleMenu`（Build Settings 先頭）→ **営業開始** で縦スライス日開始。
+4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — **役ごと全画面**（2デバイス）、裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`、結果オーバーレイ。
+5. **タイトル → 役選択**（着手済み）: `TitleMenu` → **裏で始める / 表で始める**（1/2）で縦スライス開始。
 6. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
 
 詳細マイルストーンは Cursor Project Context の **`docs/unity-production-plan.md`** を正本とします。リポジトリ内要約は `Docs/DESIGN_LINKS.md` を参照。

@@ -3,14 +3,21 @@ using UnityEngine.InputSystem;
 namespace BackbeatDiner.Core
 {
     /// <summary>
-    /// Local couch 2P keyboard split for <c>VerticalSlicePrototype</c>.
-    /// Back (left): WASD+Space hits, A/S/D/F = Beat-B1..B4.
-    /// Front (right): Enter cook, J/K serve, arrows = Beat-F1..F4.
+    /// Role key bindings for <c>VerticalSlicePrototype</c> (two devices, one role each).
+    /// Back: WASD+Space hits, A/S/D/F = Beat-B1..B4.
+    /// Front: Enter cook, J/K serve, arrows = Beat-F1..F4.
+    /// Solo debug: F8 toggles fullscreen role view.
     /// </summary>
     public static class LocalTwoPlayerBindings
     {
+        public const string HudHelpBack =
+            "【裏・全画面】WASD+Space=ヒット / A·S·D·F=Beat-B1..B4 / Q=C1クエスト　　F8=表へ切替（ソロ確認）";
+
+        public const string HudHelpFront =
+            "【表・全画面】Enter=クック→配膳 / J·K=配膳ヒット / ←↓→↑=Beat-F1..F4 / Tab長押し=C2スナップ　　F8=裏へ切替（ソロ確認）";
+
         public const string HudHelp =
-            "【ローカル2P】裏: WASD+Space=ヒット / A·S·D·F=Beat-B1..B4 / Q=C1クエスト　　表: Enter=クック→配膳 / J·K=配膳ヒット / ←↓→↑=Beat-F1..F4 / Tab長押し=C2スナップ（配膳中は表送信ロック）";
+            "【2デバイス】各端末で役を選んで全画面。裏: WASD+Space / A·S·D·F / Q　　表: Enter / J·K / 矢印 / Tab　　F8=役切替（ソロ）";
 
         public const string HudBackHint =
             "裏: WASD+Space = ヒット　　A / S / D / F = Beat-B1..B4　　Q = C1クエスト（CD15s・譜面中不可）";
@@ -29,6 +36,9 @@ namespace BackbeatDiner.Core
 
         public const string HudFrontSnapHint =
             "C2スナップ: Tab 長押し 0.8s → 送信 1.2s（CD 25s・間隙推奨）";
+
+        public const string RolePickHint =
+            "1 = 裏で始める　　2 = 表で始める（端末ごとに1役・全画面）";
 
         public static bool WasBackHitPressed()
         {

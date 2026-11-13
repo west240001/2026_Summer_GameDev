@@ -1,15 +1,20 @@
+using System.Collections;
 using BackbeatDiner.Back;
 using BackbeatDiner.Coop;
 using BackbeatDiner.Front;
 using BackbeatDiner.Rhythm;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace BackbeatDiner.Core
 {
     /// <summary>
-    /// Vertical slice: left = back rhythm station, right = front low-poly diner.
-    /// Shared <see cref="DaySessionState"/> links Perfect/Good → 仕込み and Instant Cook → F1+ 配膳リズム → 提供.
+    /// Vertical slice — single-role fullscreen for two devices (one screen each).
+    /// Back: kitchen + back HUD. Front: diner + front HUD.
+    /// Shared <see cref="DaySessionState"/> / setlist always runs (host logic on this scene).
+    /// Solo: F8 toggles role view.
     /// </summary>
     public sealed class VerticalSliceBootstrap : MonoBehaviour
     {
@@ -25,6 +30,8 @@ namespace BackbeatDiner.Core
         private static readonly Color TileGrout = new Color(0.78f, 0.82f, 0.84f, 1f);
         private static readonly Color WarmAmber = new Color(1f, 0.72f, 0.35f, 1f);
 
+        private const KeyCode DebugRoleToggleKey = KeyCode.F8;
+
         [SerializeField] private AudioClip metronomeClick;
         [SerializeField] private ChartDefinition chart;
         [SerializeField] private SetlistDefinition setlist;
@@ -35,7 +42,18 @@ namespace BackbeatDiner.Core
         [SerializeField] private Material navyMaterial;
         [SerializeField] private int customerCount = 2;
 
-        private void Start()
+        private Camera _backCam;
+        private Camera _frontCam;
+        private BeatLexiconDemo _backBeats;
+        private BeatLexiconDemo _frontBeats;
+        private SurveillanceThumbnail _surveillance;
+        private Transform _hudRoot;
+        private Text _helpLabel;
+        private Text _roleBadge;
+        private GameObject _rolePickOverlay;
+        private bool _sessionStarted;
+
+        private IEnumerator Start()
         {
             ResolveMaterials();
             if (buildPlaceholders)
@@ -44,9 +62,16 @@ namespace BackbeatDiner.Core
             }
 
             EnsureLightsAndFog();
-            var backCam = EnsureBackCamera();
-            var frontCam = EnsureFrontCamera();
-            _ = backCam;
+            _backCam = EnsureBackCamera();
+            _frontCam = EnsureFrontCamera();
+
+            if (!VerticalSliceRoleSelection.HasUserSelection)
+            {
+                VerticalSliceRoleSelection.LoadSavedOrDefault();
+                yield return WaitForRolePick();
+            }
+
+            ApplyRolePresentation();
 
             var systems = new GameObject("VerticalSliceSystems");
             var clock = systems.AddComponent<RhythmClock>();
@@ -58,15 +83,15 @@ namespace BackbeatDiner.Core
             var inventory = systems.AddComponent<InventoryBar>();
             var cook = systems.AddComponent<InstantCookInput>();
             var serveRhythm = systems.AddComponent<ServeRhythmWindow>();
-            var backBeats = systems.AddComponent<BeatLexiconDemo>();
-            var frontBeats = systems.AddComponent<BeatLexiconDemo>();
+            _backBeats = systems.AddComponent<BeatLexiconDemo>();
+            _frontBeats = systems.AddComponent<BeatLexiconDemo>();
             var receivePulse = systems.AddComponent<BeatReceivePulse>();
             var gapCoop = systems.AddComponent<ChartGapCoopWindow>();
             var snapshotSend = systems.AddComponent<SnapshotSendController>();
             var snapshotReceive = systems.AddComponent<SnapshotReceivePanel>();
             var questRequest = systems.AddComponent<QuestRequestController>();
             var questReceive = systems.AddComponent<QuestReceiveToast>();
-            var surveillance = systems.AddComponent<SurveillanceThumbnail>();
+            _surveillance = systems.AddComponent<SurveillanceThumbnail>();
 
             if (metronomeClick == null)
             {
@@ -127,7 +152,7 @@ namespace BackbeatDiner.Core
                 out var retryButton, out var titleButton, out var chartNameLabel);
 
             inventory.BuildUi(invRow);
-            // Local 2P: Back WASD+Space hits stay live during Front serve (J·K).
+            // Role bindings stay split-style so solo F8 can drive either side's keys.
             hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true);
             hitInput.Window = JudgeWindow.Default;
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody,
@@ -137,19 +162,22 @@ namespace BackbeatDiner.Core
             serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true, serveMeter);
             cook.Configure(session, queue, cookFeedback, serveRhythm, twoPlayerSplit: true);
             // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
-            backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
-            frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
+            _backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
+            _frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
             // Gap coop: スナップ推奨 / Beat-B3 hint + brief CD unlock + pulse
             receivePulse.Configure(autoSimulate: false, tutorialToast: false);
-            gapCoop.Configure(backBeats, frontBeats, receivePulse, snapshotSend, questRequest);
+            gapCoop.Configure(_backBeats, _frontBeats, receivePulse, snapshotSend, questRequest);
             // C2: Tab hold 0.8s → send 1.2s → Back Snap-In panel + SE (CD 25s; gap preferred)
             snapshotReceive.Configure();
             snapshotSend.Configure(inventory, queue, gapCoop);
             // C1: Back Q → Quest SE + Front toast/icon (CD 15s; blocked while notes active)
             questReceive.Configure();
             questRequest.Configure(highway);
-            // KG-4: Back surveillance RawImage of FrontCamera (~2Hz); BLIND while HasActiveNotes
-            surveillance.Configure(highway, frontCam);
+            // KG-4: Back surveillance of FrontCamera (~2Hz); only when viewing Back
+            _surveillance.Configure(highway, _frontCam);
+
+            ApplyRolePresentation();
+            _sessionStarted = true;
 
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
@@ -158,8 +186,8 @@ namespace BackbeatDiner.Core
                 runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel, gapCoop);
                 runner.StartSetlist(0.35);
                 Debug.Log(
-                    $"[BACKBEAT DINER] VerticalSlicePrototype ready — setlist={setlist.name} " +
-                    $"charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; kitchen BACK + diner FRONT; local 2P; gap coop window.");
+                    $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
+                    $"setlist={setlist.name} charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; shared DaySessionState; F8 toggles role.");
             }
             else
             {
@@ -173,8 +201,298 @@ namespace BackbeatDiner.Core
                 session.Begin();
                 clock.StartClock(0.35);
                 var chartLabel = chart != null ? chart.DisplayName : "(fallback every-beat)";
-                Debug.Log($"[BACKBEAT DINER] VerticalSlicePrototype ready — chart={chartLabel}; kitchen BACK + diner FRONT; local 2P.");
+                Debug.Log(
+                    $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
+                    $"chart={chartLabel}; shared DaySessionState; F8 toggles role.");
             }
+        }
+
+        private void Update()
+        {
+            if (!_sessionStarted)
+            {
+                return;
+            }
+
+            if (Input.GetKeyDown(DebugRoleToggleKey))
+            {
+                VerticalSliceRoleSelection.Toggle();
+                ApplyRolePresentation();
+                Debug.Log($"[BACKBEAT DINER] Debug role switch → {VerticalSliceRoleSelection.DisplayName} fullscreen");
+            }
+        }
+
+        private IEnumerator WaitForRolePick()
+        {
+            EnsureRolePickOverlay();
+            if (_rolePickOverlay != null)
+            {
+                _rolePickOverlay.SetActive(true);
+            }
+
+            while (!VerticalSliceRoleSelection.HasUserSelection)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+                {
+                    VerticalSliceRoleSelection.Select(VerticalSlicePlayRole.Back);
+                }
+                else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+                {
+                    VerticalSliceRoleSelection.Select(VerticalSlicePlayRole.Front);
+                }
+
+                yield return null;
+            }
+
+            if (_rolePickOverlay != null)
+            {
+                _rolePickOverlay.SetActive(false);
+            }
+        }
+
+        private void ApplyRolePresentation()
+        {
+            var back = VerticalSliceRoleSelection.IsBack;
+            ApplyRoleCameras(back);
+            ApplyRoleHud(back);
+            _backBeats?.SetPadUiVisible(back);
+            _frontBeats?.SetPadUiVisible(!back);
+
+            if (_surveillance != null)
+            {
+                _surveillance.enabled = back;
+                SetNamedActive("SurveillanceHud", back);
+            }
+
+            SetNamedActive("QuestRequestHud", back);
+            SetNamedActive("SnapshotReceivePanel", back);
+            SetNamedActive("SnapshotEdgePulse", back);
+            SetNamedActive("SnapshotSendHud", !back);
+            SetNamedActive("QuestReceiveToast", !back);
+
+            if (_roleBadge != null)
+            {
+                _roleBadge.text = back ? "役: 裏（キッチン全画面）" : "役: 表（ダイナー全画面）";
+            }
+
+            if (_helpLabel != null)
+            {
+                _helpLabel.text = back
+                    ? LocalTwoPlayerBindings.HudHelpBack
+                    : LocalTwoPlayerBindings.HudHelpFront;
+            }
+        }
+
+        private void ApplyRoleCameras(bool back)
+        {
+            if (_backCam == null)
+            {
+                _backCam = EnsureBackCamera();
+            }
+
+            if (_frontCam == null)
+            {
+                _frontCam = EnsureFrontCamera();
+            }
+
+            _backCam.rect = new Rect(0f, 0f, 1f, 1f);
+            _frontCam.rect = new Rect(0f, 0f, 1f, 1f);
+            _backCam.enabled = back;
+            _frontCam.enabled = !back;
+
+            EnsureSingleAudioListener(back ? _backCam.gameObject : _frontCam.gameObject);
+        }
+
+        private static void EnsureSingleAudioListener(GameObject host)
+        {
+            foreach (var listener in Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None))
+            {
+                if (listener != null && listener.gameObject != host)
+                {
+                    Object.Destroy(listener);
+                }
+            }
+
+            if (host.GetComponent<AudioListener>() == null)
+            {
+                host.AddComponent<AudioListener>();
+            }
+        }
+
+        private void ApplyRoleHud(bool back)
+        {
+            if (_hudRoot == null)
+            {
+                var canvas = GameObject.Find("VerticalSliceHUD");
+                _hudRoot = canvas != null ? canvas.transform : null;
+            }
+
+            if (_hudRoot == null)
+            {
+                return;
+            }
+
+            SetChildActive(_hudRoot, "BackPanel", back);
+            SetChildActive(_hudRoot, "BackTitle", back);
+            SetChildActive(_hudRoot, "JudgementLabel", back);
+            SetChildActive(_hudRoot, "ComboLabel", back);
+            SetChildActive(_hudRoot, "BpmLabel", back);
+            SetChildActive(_hudRoot, "BackControlsHint", back);
+            SetChildActive(_hudRoot, "BackQuestPrompt", back);
+
+            SetChildActive(_hudRoot, "FrontPanel", !back);
+            SetChildActive(_hudRoot, "FrontTitle", !back);
+            SetChildActive(_hudRoot, "PrepLabel", !back);
+            SetChildActive(_hudRoot, "ServeLabel", !back);
+            SetChildActive(_hudRoot, "PrepBar", !back);
+            SetChildActive(_hudRoot, "ServeBar", !back);
+            SetChildActive(_hudRoot, "CookFeedback", !back);
+            SetChildActive(_hudRoot, "ServeRhythmHint", !back);
+            SetChildActive(_hudRoot, "FrontBeatHint", !back);
+            SetChildActive(_hudRoot, "FrontSnapHint", !back);
+            SetChildActive(_hudRoot, "ServeMeterPanel", !back);
+            SetChildActive(_hudRoot, "ServeRhythmMeter", !back);
+            SetChildActive(_hudRoot, "InventoryRow", !back);
+        }
+
+        private static void SetChildActive(Transform root, string name, bool active)
+        {
+            var t = root.Find(name);
+            if (t != null)
+            {
+                t.gameObject.SetActive(active);
+            }
+        }
+
+        private void SetNamedActive(string name, bool active)
+        {
+            if (_hudRoot == null)
+            {
+                var canvas = GameObject.Find("VerticalSliceHUD");
+                _hudRoot = canvas != null ? canvas.transform : null;
+            }
+
+            if (_hudRoot != null)
+            {
+                var underHud = _hudRoot.Find(name);
+                if (underHud != null)
+                {
+                    underHud.gameObject.SetActive(active);
+                    return;
+                }
+            }
+
+            var go = GameObject.Find(name);
+            if (go != null)
+            {
+                go.SetActive(active);
+            }
+        }
+
+        private void EnsureRolePickOverlay()
+        {
+            if (_rolePickOverlay != null)
+            {
+                return;
+            }
+
+            EnsureEventSystem();
+            var canvas = CookingSimHud.EnsureOverlayCanvas("VerticalSliceHUD", 20);
+            _hudRoot = canvas.transform;
+            var panel = CookingSimHud.EnsurePanel(
+                canvas.transform,
+                "RolePickOverlay",
+                new Vector2(0f, 0f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                new Color(0.02f, 0.04f, 0.07f, 0.94f),
+                goldBorder: false);
+            var rt = panel.GetComponent<RectTransform>();
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            panel.transform.SetAsLastSibling();
+
+            CookingSimHud.EnsureLabel(panel.transform, "RolePickTitle", "BACKBEAT DINER",
+                new Vector2(0f, 120f), TextAnchor.MiddleCenter, 42, CookingSimHud.Gold, FontStyle.Bold, 800f, 52f);
+            CookingSimHud.EnsureLabel(panel.transform, "RolePickSub", "端末ごとに役を選んでください（2デバイス・各1画面）",
+                new Vector2(0f, 60f), TextAnchor.MiddleCenter, CookingSimHud.FontBody, CookingSimHud.Cream, FontStyle.Normal, 900f, 36f);
+            CookingSimHud.EnsureLabel(panel.transform, "RolePickHint", LocalTwoPlayerBindings.RolePickHint,
+                new Vector2(0f, -120f), TextAnchor.MiddleCenter, CookingSimHud.FontRow, CookingSimHud.Teal, FontStyle.Normal, 800f, 32f);
+
+            BuildRolePickButton(panel.transform, "PickBackButton", "裏で始める", new Vector2(-220f, -20f), () =>
+            {
+                VerticalSliceRoleSelection.Select(VerticalSlicePlayRole.Back);
+            });
+            BuildRolePickButton(panel.transform, "PickFrontButton", "表で始める", new Vector2(220f, -20f), () =>
+            {
+                VerticalSliceRoleSelection.Select(VerticalSlicePlayRole.Front);
+            });
+
+            _rolePickOverlay = panel;
+        }
+
+        private static void BuildRolePickButton(Transform parent, string name, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
+        {
+            var existing = parent.Find(name);
+            GameObject go;
+            if (existing == null)
+            {
+                go = new GameObject(name);
+                go.transform.SetParent(parent, false);
+            }
+            else
+            {
+                go = existing.gameObject;
+            }
+
+            var rt = go.GetComponent<RectTransform>() ?? go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(360f, 72f);
+
+            var img = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            img.color = CookingSimHud.Gold;
+            var button = go.GetComponent<Button>() ?? go.AddComponent<Button>();
+            button.targetGraphic = img;
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(onClick);
+
+            var text = go.GetComponentInChildren<Text>();
+            if (text == null)
+            {
+                var labelGo = new GameObject("Label");
+                labelGo.transform.SetParent(go.transform, false);
+                text = labelGo.AddComponent<Text>();
+                var lrt = text.rectTransform;
+                lrt.anchorMin = Vector2.zero;
+                lrt.anchorMax = Vector2.one;
+                lrt.offsetMin = Vector2.zero;
+                lrt.offsetMax = Vector2.zero;
+            }
+
+            text.font = CookingSimHud.UiFont();
+            text.fontSize = 28;
+            text.fontStyle = FontStyle.Bold;
+            text.color = Navy;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.text = label;
+            text.raycastTarget = false;
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (FindFirstObjectByType<EventSystem>() != null)
+            {
+                return;
+            }
+
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<InputSystemUIInputModule>();
         }
 
         private void ResolveMaterials()
@@ -553,14 +871,9 @@ namespace BackbeatDiner.Core
             cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = Navy;
             cam.depth = 0;
-            cam.rect = new Rect(0f, 0f, 0.5f, 1f);
+            cam.rect = new Rect(0f, 0f, 1f, 1f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 60f;
-            if (go.GetComponent<AudioListener>() == null)
-            {
-                go.AddComponent<AudioListener>();
-            }
-
             return cam;
         }
 
@@ -588,18 +901,12 @@ namespace BackbeatDiner.Core
                 }
             }
 
-            var listener = cam.GetComponent<AudioListener>();
-            if (listener != null)
-            {
-                Object.Destroy(listener);
-            }
-
             cam.transform.position = new Vector3(6f, 3.25f, -5.4f);
             cam.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
             cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = Navy;
             cam.depth = 1;
-            cam.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+            cam.rect = new Rect(0f, 0f, 1f, 1f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 60f;
             return cam;
@@ -645,7 +952,7 @@ namespace BackbeatDiner.Core
             }
         }
 
-        private static void BuildHud(
+        private void BuildHud(
             out Text judgement,
             out Text combo,
             out Text bpmLabel,
@@ -667,6 +974,14 @@ namespace BackbeatDiner.Core
         {
             var canvas = CookingSimHud.EnsureOverlayCanvas("VerticalSliceHUD", 20);
             var root = canvas.transform;
+            _hudRoot = root;
+
+            // Remove legacy split divider if a previous Play left one in the hierarchy.
+            var legacySplit = root.Find("SplitDivider");
+            if (legacySplit != null)
+            {
+                Object.Destroy(legacySplit.gameObject);
+            }
 
             // Center brand (compact — does not compete with order tickets)
             var logo = CookingSimHud.EnsureLabel(root, "BrandLogo", "BACKBEAT DINER", new Vector2(0f, -8f),
@@ -677,77 +992,75 @@ namespace BackbeatDiner.Core
             chartNameLabel = CookingSimHud.EnsureLabel(root, "ChartNameLabel", "チャート名: —",
                 new Vector2(0f, -72f), TextAnchor.UpperCenter, CookingSimHud.FontRow, CookingSimHud.Cream,
                 FontStyle.Normal, 560f, 28f);
+            _roleBadge = CookingSimHud.EnsureLabel(root, "RoleBadge", "役: —",
+                new Vector2(0f, -100f), TextAnchor.UpperCenter, CookingSimHud.FontHint, CookingSimHud.GoldBright,
+                FontStyle.Bold, 520f, 26f);
 
-            // Clear left / right split
-            CookingSimHud.EnsurePanel(root, "SplitDivider", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 0f),
-                new Color(CookingSimHud.Gold.r, CookingSimHud.Gold.g, CookingSimHud.Gold.b, 0.8f), goldBorder: false);
-
-            // LEFT = Back order ticket
+            // Back order ticket (fullscreen when 裏)
             CookingSimHud.EnsurePanel(root, "BackPanel", new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(0f, 1f), new Vector2(18f, -88f), new Vector2(460f, 280f), CookingSimHud.PanelBg);
+                new Vector2(0f, 1f), new Vector2(24f, -120f), new Vector2(520f, 300f), CookingSimHud.PanelBg);
             CookingSimHud.EnsureLabel(root, "BackTitle", "【注文票】裏 · リズムステーション",
-                new Vector2(34f, -98f), TextAnchor.UpperLeft, CookingSimHud.FontHeader, CookingSimHud.Gold,
-                FontStyle.Bold, 440f, 34f);
+                new Vector2(40f, -130f), TextAnchor.UpperLeft, CookingSimHud.FontHeader, CookingSimHud.Gold,
+                FontStyle.Bold, 480f, 34f);
             judgement = CookingSimHud.EnsureLabel(root, "JudgementLabel", "判定: —",
-                new Vector2(34f, -140f), TextAnchor.UpperLeft, 30, CookingSimHud.White, FontStyle.Bold, 420f, 38f);
+                new Vector2(40f, -172f), TextAnchor.UpperLeft, 30, CookingSimHud.White, FontStyle.Bold, 480f, 38f);
             combo = CookingSimHud.EnsureLabel(root, "ComboLabel", "コンボ: 0",
-                new Vector2(34f, -182f), TextAnchor.UpperLeft, CookingSimHud.FontBody, CookingSimHud.Gold,
-                FontStyle.Normal, 420f, 32f);
+                new Vector2(40f, -214f), TextAnchor.UpperLeft, CookingSimHud.FontBody, CookingSimHud.Gold,
+                FontStyle.Normal, 480f, 32f);
             bpmLabel = CookingSimHud.EnsureLabel(root, "BpmLabel", "BPM: 120",
-                new Vector2(34f, -218f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.Cream,
-                FontStyle.Normal, 420f, 30f);
+                new Vector2(40f, -250f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.Cream,
+                FontStyle.Normal, 480f, 30f);
             CookingSimHud.EnsureLabel(root, "BackControlsHint", LocalTwoPlayerBindings.HudBackHint,
-                new Vector2(34f, -256f), TextAnchor.UpperLeft, CookingSimHud.FontHint, CookingSimHud.Cream,
-                FontStyle.Normal, 430f, 56f);
+                new Vector2(40f, -288f), TextAnchor.UpperLeft, CookingSimHud.FontHint, CookingSimHud.Cream,
+                FontStyle.Normal, 500f, 56f);
             CookingSimHud.EnsureLabel(root, "BackQuestPrompt", "◆ C1 クエスト  Qキー",
-                new Vector2(34f, -318f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.GoldBright,
-                FontStyle.Bold, 420f, 32f);
+                new Vector2(40f, -350f), TextAnchor.UpperLeft, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 480f, 32f);
 
-            // RIGHT = Front service board
+            // Front service board (fullscreen when 表)
             CookingSimHud.EnsurePanel(root, "FrontPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(1f, 1f), new Vector2(-18f, -88f), new Vector2(480f, 360f), CookingSimHud.PanelBg);
+                new Vector2(1f, 1f), new Vector2(-24f, -120f), new Vector2(520f, 380f), CookingSimHud.PanelBg);
             CookingSimHud.EnsureLabel(root, "FrontTitle", "【サービス】表 · ダイナーフロア",
-                new Vector2(-34f, -98f), TextAnchor.UpperRight, CookingSimHud.FontHeader, CookingSimHud.Gold,
-                FontStyle.Bold, 450f, 34f);
+                new Vector2(-40f, -130f), TextAnchor.UpperRight, CookingSimHud.FontHeader, CookingSimHud.Gold,
+                FontStyle.Bold, 480f, 34f);
             prep = CookingSimHud.EnsureLabel(root, "PrepLabel", "仕込み: 0",
-                new Vector2(-34f, -140f), TextAnchor.UpperRight, 28, CookingSimHud.White, FontStyle.Bold, 420f, 36f);
+                new Vector2(-40f, -172f), TextAnchor.UpperRight, 28, CookingSimHud.White, FontStyle.Bold, 460f, 36f);
             serve = CookingSimHud.EnsureLabel(root, "ServeLabel", "提供: 0",
-                new Vector2(-34f, -178f), TextAnchor.UpperRight, 28, CookingSimHud.Cream, FontStyle.Bold, 420f, 36f);
+                new Vector2(-40f, -210f), TextAnchor.UpperRight, 28, CookingSimHud.Cream, FontStyle.Bold, 460f, 36f);
             prepFill = CookingSimHud.EnsureLabeledBar(root, "PrepBar", "仕込みゲージ",
-                new Vector2(-34f, -220f), TextAnchor.UpperRight, CookingSimHud.Gold, 400f, 24f);
+                new Vector2(-40f, -252f), TextAnchor.UpperRight, CookingSimHud.Gold, 440f, 24f);
             serveFill = CookingSimHud.EnsureLabeledBar(root, "ServeBar", "提供ゲージ",
-                new Vector2(-34f, -268f), TextAnchor.UpperRight, CookingSimHud.Teal, 400f, 24f);
+                new Vector2(-40f, -300f), TextAnchor.UpperRight, CookingSimHud.Teal, 440f, 24f);
             cookFeedback = CookingSimHud.EnsureLabel(root, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
-                new Vector2(-34f, -320f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
-                FontStyle.Bold, 440f, 34f);
+                new Vector2(-40f, -352f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 480f, 34f);
             CookingSimHud.EnsureLabel(root, "ServeRhythmHint", LocalTwoPlayerBindings.HudFrontServeHint,
-                new Vector2(-34f, -354f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Cream,
-                FontStyle.Normal, 440f, 30f);
+                new Vector2(-40f, -386f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Cream,
+                FontStyle.Normal, 480f, 30f);
             CookingSimHud.EnsureLabel(root, "FrontBeatHint", LocalTwoPlayerBindings.HudFrontBeatHint,
-                new Vector2(-34f, -384f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Gold,
-                FontStyle.Normal, 440f, 28f);
+                new Vector2(-40f, -416f), TextAnchor.UpperRight, CookingSimHud.FontHint, CookingSimHud.Gold,
+                FontStyle.Normal, 480f, 28f);
             CookingSimHud.EnsureLabel(root, "FrontSnapHint", "◆ C2 スナップ  Tab長押し",
-                new Vector2(-34f, -414f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
-                FontStyle.Bold, 440f, 30f);
+                new Vector2(-40f, -446f), TextAnchor.UpperRight, CookingSimHud.FontRow, CookingSimHud.GoldBright,
+                FontStyle.Bold, 480f, 30f);
 
-            // Center session ticket
+            // Center session ticket (shared)
             CookingSimHud.EnsurePanel(root, "SessionPanel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(460f, 110f), CookingSimHud.PanelBg);
+                new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(460f, 110f), CookingSimHud.PanelBg);
             timer = CookingSimHud.EnsureLabel(root, "TimerLabel", "残り 30.0s / ビート 0/32",
-                new Vector2(0f, -112f), TextAnchor.UpperCenter, CookingSimHud.FontBody, CookingSimHud.White,
+                new Vector2(0f, -144f), TextAnchor.UpperCenter, CookingSimHud.FontBody, CookingSimHud.White,
                 FontStyle.Bold, 440f, 34f);
             sessionFill = CookingSimHud.EnsureLabeledBar(root, "SessionBar", "セッション進行",
-                new Vector2(0f, -152f), TextAnchor.UpperCenter, CookingSimHud.Teal, 400f, 22f);
+                new Vector2(0f, -184f), TextAnchor.UpperCenter, CookingSimHud.Teal, 400f, 22f);
 
-            // Big serve rhythm meter (Cooking Sim style action gauge)
+            // Big serve rhythm meter (Front only)
             CookingSimHud.EnsurePanel(root, "ServeMeterPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(1f, 1f), new Vector2(-18f, -470f), new Vector2(480f, 88f), CookingSimHud.PanelBgSoft);
+                new Vector2(1f, 1f), new Vector2(-24f, -520f), new Vector2(520f, 88f), CookingSimHud.PanelBgSoft);
             serveMeter = CookingSimHud.EnsureLabeledBar(root, "ServeRhythmMeter", "◆ 配膳リズムメーター  J·K",
-                new Vector2(-34f, -484f), TextAnchor.UpperRight, CookingSimHud.GoldBright, 440f, 32f, CookingSimHud.FontRow);
+                new Vector2(-40f, -534f), TextAnchor.UpperRight, CookingSimHud.GoldBright, 480f, 32f, CookingSimHud.FontRow);
             serveMeter.fillAmount = 0f;
 
-            // Inventory slots row (right region)
+            // Inventory slots row (Front)
             var rowGo = root.Find("InventoryRow");
             if (rowGo == null)
             {
@@ -763,16 +1076,16 @@ namespace BackbeatDiner.Core
             invRow.anchorMin = new Vector2(1f, 1f);
             invRow.anchorMax = new Vector2(1f, 1f);
             invRow.pivot = new Vector2(1f, 1f);
-            invRow.anchoredPosition = new Vector2(-28f, -580f);
+            invRow.anchoredPosition = new Vector2(-28f, -630f);
             invRow.sizeDelta = new Vector2(700f, 96f);
 
             // Bottom help strip
             var helpPanel = CookingSimHud.EnsurePanel(root, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(1840f, 64f), CookingSimHud.PanelBg);
-            var help = CookingSimHud.EnsureChildLabel(helpPanel.transform, "HelpLabel",
+            _helpLabel = CookingSimHud.EnsureChildLabel(helpPanel.transform, "HelpLabel",
                 LocalTwoPlayerBindings.HudHelp, CookingSimHud.FontHint, CookingSimHud.Cream);
-            help.alignment = TextAnchor.MiddleCenter;
-            var helpRt = help.rectTransform;
+            _helpLabel.alignment = TextAnchor.MiddleCenter;
+            var helpRt = _helpLabel.rectTransform;
             helpRt.anchorMin = Vector2.zero;
             helpRt.anchorMax = Vector2.one;
             helpRt.offsetMin = new Vector2(16f, 6f);

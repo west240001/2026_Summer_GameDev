@@ -7,7 +7,8 @@ using UnityEngine.UI;
 namespace BackbeatDiner.Core
 {
     /// <summary>
-    /// Title menu: full-bleed art, brand logo, catchcopy, gold CTA → VerticalSlicePrototype.
+    /// Title menu: full-bleed art, brand logo, catchcopy, role CTAs → VerticalSlicePrototype.
+    /// Two-device play: pick 裏 / 表 (or keys 1/2) before loading the day slice.
     /// </summary>
     public sealed class TitleMenuController : MonoBehaviour
     {
@@ -25,34 +26,36 @@ namespace BackbeatDiner.Core
         [SerializeField] private string playSceneName = VerticalSliceScene;
         [SerializeField] private Sprite titleBackground;
 
-        private Image _ctaImage;
-        private RectTransform _ctaRt;
-        private Vector2 _ctaBaseSize;
-        private bool _ctaHovered;
-
         private void Start()
         {
             EnsureCamera();
             EnsureEventSystem();
             ResolveBackgroundSprite();
             BuildUi();
-            Debug.Log("[BACKBEAT DINER] TitleMenu ready — 営業開始 → " + playSceneName);
+            Debug.Log("[BACKBEAT DINER] TitleMenu ready — 裏で始める / 表で始める (1/2) → " + playSceneName);
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
             {
-                StartDay();
+                StartDayAs(VerticalSlicePlayRole.Back);
             }
-
-            AnimateCtaHover();
+            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                StartDayAs(VerticalSlicePlayRole.Front);
+            }
         }
 
-        public void StartDay()
+        public void StartDayAsBack() => StartDayAs(VerticalSlicePlayRole.Back);
+
+        public void StartDayAsFront() => StartDayAs(VerticalSlicePlayRole.Front);
+
+        public void StartDayAs(VerticalSlicePlayRole role)
         {
+            VerticalSliceRoleSelection.Select(role);
             var target = string.IsNullOrWhiteSpace(playSceneName) ? VerticalSliceScene : playSceneName.Trim();
-            Debug.Log("[BACKBEAT DINER] 営業開始 — loading " + target);
+            Debug.Log($"[BACKBEAT DINER] {VerticalSliceRoleSelection.DisplayName}で始める — loading " + target);
             SceneManager.LoadScene(target, LoadSceneMode.Single);
         }
 
@@ -63,7 +66,6 @@ namespace BackbeatDiner.Core
                 return;
             }
 
-            // Optional Resources fallback if the scene was not rebuilt with TitleMenuSceneBuilder.
             titleBackground = Resources.Load<Sprite>("TitleBackground");
         }
 
@@ -117,7 +119,6 @@ namespace BackbeatDiner.Core
             BuildBottomGradient(canvasGo.transform);
             BuildVignetteEdges(canvasGo.transform);
 
-            // Content stack anchored lower-center over the dark wash
             var stack = new GameObject("ContentStack");
             stack.transform.SetParent(canvasGo.transform, false);
             var stackRt = stack.AddComponent<RectTransform>();
@@ -125,44 +126,49 @@ namespace BackbeatDiner.Core
             stackRt.anchorMax = new Vector2(0.5f, 0f);
             stackRt.pivot = new Vector2(0.5f, 0f);
             stackRt.anchoredPosition = new Vector2(0f, 96f);
-            stackRt.sizeDelta = new Vector2(1100f, 520f);
+            stackRt.sizeDelta = new Vector2(1100f, 560f);
 
             var brand = CreateLabel(stack.transform, "BrandLogo", "BACKBEAT DINER",
-                new Vector2(0f, 390f), 78, Gold, FontStyle.Bold);
+                new Vector2(0f, 430f), 78, Gold, FontStyle.Bold);
             brand.alignment = TextAnchor.MiddleCenter;
             brand.horizontalOverflow = HorizontalWrapMode.Overflow;
             brand.rectTransform.sizeDelta = new Vector2(1100f, 96f);
 
-            var rule = CreatePanel(
+            CreatePanel(
                 stack.transform,
                 "GoldRule",
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 332f),
+                new Vector2(0f, 372f),
                 new Vector2(220f, 3f),
                 new Color(Gold.r, Gold.g, Gold.b, 0.85f));
-            rule.GetComponent<Image>().raycastTarget = false;
 
             var sub = CreateLabel(stack.transform, "BrandSub", "バックビート・ダイナー",
-                new Vector2(0f, 292f), 22, new Color(Teal.r, Teal.g, Teal.b, 0.95f), FontStyle.Normal);
+                new Vector2(0f, 332f), 22, new Color(Teal.r, Teal.g, Teal.b, 0.95f), FontStyle.Normal);
             sub.alignment = TextAnchor.MiddleCenter;
             sub.rectTransform.sizeDelta = new Vector2(720f, 34f);
 
             var catch1 = CreateLabel(stack.transform, "CatchcopyPrimary", CatchcopyPrimary,
-                new Vector2(0f, 230f), 30, Cream, FontStyle.Normal);
+                new Vector2(0f, 270f), 30, Cream, FontStyle.Normal);
             catch1.alignment = TextAnchor.MiddleCenter;
             catch1.rectTransform.sizeDelta = new Vector2(980f, 44f);
 
             var catch2 = CreateLabel(stack.transform, "CatchcopySecondary", CatchcopySecondary,
-                new Vector2(0f, 186f), 22, new Color(Cream.r, Cream.g, Cream.b, 0.72f), FontStyle.Normal);
+                new Vector2(0f, 226f), 22, new Color(Cream.r, Cream.g, Cream.b, 0.72f), FontStyle.Normal);
             catch2.alignment = TextAnchor.MiddleCenter;
             catch2.rectTransform.sizeDelta = new Vector2(980f, 36f);
 
-            BuildCtaButton(stack.transform);
+            var roleLine = CreateLabel(stack.transform, "RoleLine", "2デバイス · 各1画面 — 役を選んで営業開始",
+                new Vector2(0f, 170f), 18, new Color(Gold.r, Gold.g, Gold.b, 0.9f), FontStyle.Normal);
+            roleLine.alignment = TextAnchor.MiddleCenter;
+            roleLine.rectTransform.sizeDelta = new Vector2(900f, 28f);
 
-            var hint = CreateLabel(stack.transform, "Hint", "Enter / Space",
-                new Vector2(0f, 48f), 15, new Color(Teal.r, Teal.g, Teal.b, 0.75f), FontStyle.Normal);
+            BuildRoleCta(stack.transform, "StartBackButton", "裏で始める", new Vector2(-210f, 100f), StartDayAsBack);
+            BuildRoleCta(stack.transform, "StartFrontButton", "表で始める", new Vector2(210f, 100f), StartDayAsFront);
+
+            var hint = CreateLabel(stack.transform, "Hint", "1 = 裏　　2 = 表",
+                new Vector2(0f, 28f), 15, new Color(Teal.r, Teal.g, Teal.b, 0.75f), FontStyle.Normal);
             hint.alignment = TextAnchor.MiddleCenter;
             hint.rectTransform.sizeDelta = new Vector2(360f, 24f);
 
@@ -222,7 +228,6 @@ namespace BackbeatDiner.Core
 
         private static void BuildVignetteEdges(Transform parent)
         {
-            // Soft side wash so the brand stack reads clearly without flattening the art.
             CreatePanel(
                 parent,
                 "LeftWash",
@@ -254,19 +259,17 @@ namespace BackbeatDiner.Core
                 new Color(0.02f, 0.04f, 0.07f, 0.35f));
         }
 
-        private void BuildCtaButton(Transform parent)
+        private void BuildRoleCta(Transform parent, string name, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
         {
-            var buttonGo = new GameObject("StartDayButton");
+            var buttonGo = new GameObject(name);
             buttonGo.transform.SetParent(parent, false);
-            _ctaRt = buttonGo.AddComponent<RectTransform>();
-            _ctaRt.anchorMin = new Vector2(0.5f, 0.5f);
-            _ctaRt.anchorMax = new Vector2(0.5f, 0.5f);
-            _ctaRt.pivot = new Vector2(0.5f, 0.5f);
-            _ctaRt.anchoredPosition = new Vector2(0f, 110f);
-            _ctaBaseSize = new Vector2(380f, 78f);
-            _ctaRt.sizeDelta = _ctaBaseSize;
+            var rt = buttonGo.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(360f, 72f);
 
-            // Soft gold glow plate behind the CTA
             var glow = CreatePanel(
                 buttonGo.transform,
                 "CtaGlow",
@@ -274,12 +277,12 @@ namespace BackbeatDiner.Core
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(420f, 100f),
+                new Vector2(400f, 92f),
                 new Color(Gold.r, Gold.g, Gold.b, 0.18f));
             glow.transform.SetAsFirstSibling();
 
-            _ctaImage = buttonGo.AddComponent<Image>();
-            _ctaImage.color = Gold;
+            var image = buttonGo.AddComponent<Image>();
+            image.color = Gold;
 
             var outline = buttonGo.AddComponent<Outline>();
             outline.effectColor = new Color(1f, 0.92f, 0.55f, 0.45f);
@@ -295,44 +298,16 @@ namespace BackbeatDiner.Core
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.12f;
             button.colors = colors;
-            button.targetGraphic = _ctaImage;
-            button.onClick.AddListener(StartDay);
+            button.targetGraphic = image;
+            button.onClick.AddListener(onClick);
 
-            var trigger = buttonGo.AddComponent<EventTrigger>();
-            AddTrigger(trigger, EventTriggerType.PointerEnter, _ => _ctaHovered = true);
-            AddTrigger(trigger, EventTriggerType.PointerExit, _ => _ctaHovered = false);
-
-            var label = CreateLabel(buttonGo.transform, "Label", "営業開始", Vector2.zero, 30, Navy, FontStyle.Bold);
-            label.alignment = TextAnchor.MiddleCenter;
-            var labelRt = label.rectTransform;
+            var text = CreateLabel(buttonGo.transform, "Label", label, Vector2.zero, 26, Navy, FontStyle.Bold);
+            text.alignment = TextAnchor.MiddleCenter;
+            var labelRt = text.rectTransform;
             labelRt.anchorMin = Vector2.zero;
             labelRt.anchorMax = Vector2.one;
             labelRt.offsetMin = Vector2.zero;
             labelRt.offsetMax = Vector2.zero;
-        }
-
-        private void AnimateCtaHover()
-        {
-            if (_ctaRt == null)
-            {
-                return;
-            }
-
-            var target = _ctaHovered ? _ctaBaseSize * 1.045f : _ctaBaseSize;
-            _ctaRt.sizeDelta = Vector2.Lerp(_ctaRt.sizeDelta, target, Time.unscaledDeltaTime * 12f);
-            if (_ctaImage != null && !_ctaHovered)
-            {
-                // Gentle idle shimmer toward gold-bright
-                var pulse = (Mathf.Sin(Time.unscaledTime * 2.2f) + 1f) * 0.5f;
-                _ctaImage.color = Color.Lerp(Gold, GoldBright, pulse * 0.12f);
-            }
-        }
-
-        private static void AddTrigger(EventTrigger trigger, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> callback)
-        {
-            var entry = new EventTrigger.Entry { eventID = type };
-            entry.callback.AddListener(callback);
-            trigger.triggers.Add(entry);
         }
 
         private static Texture2D CreateVerticalGradientTexture(Color top, Color bottom)
@@ -348,7 +323,6 @@ namespace BackbeatDiner.Core
             for (var y = 0; y < height; y++)
             {
                 var t = y / (float)(height - 1);
-                // y=0 is bottom of RawImage UV in Unity — keep dark at bottom.
                 tex.SetPixel(0, y, Color.Lerp(bottom, top, t));
             }
 

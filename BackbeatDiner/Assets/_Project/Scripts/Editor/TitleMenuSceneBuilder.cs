@@ -23,7 +23,8 @@ namespace BackbeatDiner.Editor
             EditorUtility.DisplayDialog(
                 "BACKBEAT DINER",
                 "TitleMenu.unity を作成しました。\n" +
-                "背景アート + BACKBEAT DINER / キャッチコピー / 営業開始 → VerticalSlicePrototype。\n" +
+                "背景アート + BACKBEAT DINER / キャッチコピー。\n" +
+                "裏で始める / 表で始める（1/2）→ VerticalSlicePrototype 全画面。\n" +
                 "Build Settings 先頭に TitleMenu を登録済みです。",
                 "OK");
         }

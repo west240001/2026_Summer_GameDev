@@ -44,4 +44,4 @@
 
 Project Context: `docs/unity-production-plan.md` — パッケージ、フォルダマップ、週次プロト、**ネットワークは縦スライス後**。
 
-縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供、**ローカル2P キー分割** `LocalTwoPlayerBindings`：裏 WASD+Space / A·S·D·F=B* / **Q=C1クエスト**、表 Enter / J·K / 矢印=F* / **Tab=C2スナップ**、配膳中は表コミュロック）。セットリスト間隙は `ChartGapCoopWindow`（**スナップ推奨**／Beat-B3／C1 Q ヒント、C1・C2・ビート CD 解除ブースト、UI pulse）。
+縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（**2デバイス・役ごと全画面**。裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供。役選択は TitleMenu「裏で始める/表で始める」（1/2）、ソロは F8。キーは `LocalTwoPlayerBindings`）。セットリスト間隙は `ChartGapCoopWindow`。詳細はリポ `README.md`。

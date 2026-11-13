@@ -30,10 +30,10 @@ namespace BackbeatDiner.Editor
             EditorUtility.DisplayDialog(
                 "BACKBEAT DINER",
                 "VerticalSlicePrototype.unity を再生成しました。\n" +
-                "ローポリ3Dダイナー + 日本語HUD + 左右スプリットカメラ。\n" +
-                "左=裏リズムステーション / 右=表ダイナーフロア。\n" +
-                "裏: WASD+Space=ヒット、A/S/D/F=Beat-B。\n" +
-                "表: Enter=クック、J/K=配膳、矢印=Beat-F。",
+                "2デバイス向け・役ごと全画面（スプリットなし）。\n" +
+                "裏=キッチン全画面 / 表=ダイナー全画面。\n" +
+                "タイトルまたは開始時に 裏で始める / 表で始める（1/2）。\n" +
+                "ソロ確認は F8 で役切替。",
                 "OK");
         }
 
@@ -74,7 +74,7 @@ namespace BackbeatDiner.Editor
                 cam.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
                 cam.clearFlags = CameraClearFlags.Skybox;
                 cam.backgroundColor = new Color(0.055f, 0.122f, 0.2f);
-                cam.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+                cam.rect = new Rect(0f, 0f, 1f, 1f);
             }
 
             var keyGo = GameObject.Find("Directional Light");

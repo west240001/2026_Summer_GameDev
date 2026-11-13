@@ -34,6 +34,7 @@ namespace BackbeatDiner.Coop
         private Image[] _padBgs;
         private Text _statusLabel;
         private Coroutine _padPulseRoutine;
+        private GameObject _padCanvasGo;
 
         public BeatRole Role => role;
         public BeatPadKeyScheme KeyScheme => keyScheme;
@@ -66,6 +67,20 @@ namespace BackbeatDiner.Coop
         {
             cooldownLabel = cdLabel;
             cooldownFill = cdFill;
+        }
+
+        /// <summary>Show/hide pad canvas for single-role fullscreen (two-device slice).</summary>
+        public void SetPadUiVisible(bool visible)
+        {
+            if (buildPadUi && _padCanvasGo == null)
+            {
+                EnsurePadUi();
+            }
+
+            if (_padCanvasGo != null)
+            {
+                _padCanvasGo.SetActive(visible);
+            }
         }
 
         private void Awake()
@@ -313,6 +328,8 @@ namespace BackbeatDiner.Coop
                 canvasGo.AddComponent<GraphicRaycaster>();
             }
 
+            _padCanvasGo = canvasGo;
+
             var rootName = PadRootName;
             var root = canvasGo.transform.Find(rootName) ?? canvasGo.transform.Find("PadRoot");
             RectTransform rootRt;
@@ -328,22 +345,11 @@ namespace BackbeatDiner.Coop
                 rootRt = root.GetComponent<RectTransform>() ?? root.gameObject.AddComponent<RectTransform>();
             }
 
-            // Large Cooking-Sim pad dock — left=Back, right=Front
-            if (role == BeatRole.Back)
-            {
-                rootRt.anchorMin = new Vector2(0f, 0f);
-                rootRt.anchorMax = new Vector2(0f, 0f);
-                rootRt.pivot = new Vector2(0f, 0f);
-                rootRt.anchoredPosition = new Vector2(20f, 88f);
-            }
-            else
-            {
-                rootRt.anchorMin = new Vector2(1f, 0f);
-                rootRt.anchorMax = new Vector2(1f, 0f);
-                rootRt.pivot = new Vector2(1f, 0f);
-                rootRt.anchoredPosition = new Vector2(-20f, 88f);
-            }
-
+            // Fullscreen single-role dock — bottom center (two devices; no split)
+            rootRt.anchorMin = new Vector2(0.5f, 0f);
+            rootRt.anchorMax = new Vector2(0.5f, 0f);
+            rootRt.pivot = new Vector2(0.5f, 0f);
+            rootRt.anchoredPosition = new Vector2(0f, 88f);
             rootRt.sizeDelta = new Vector2(620f, 168f);
 
             var chromeT = rootRt.Find("PadChrome");
@@ -485,24 +491,12 @@ namespace BackbeatDiner.Coop
             _statusLabel.fontSize = CookingSimHud.FontRow;
             _statusLabel.fontStyle = FontStyle.Bold;
             _statusLabel.color = CookingSimHud.Cream;
+            _statusLabel.alignment = TextAnchor.MiddleCenter;
             var srt = _statusLabel.rectTransform;
-            if (role == BeatRole.Back)
-            {
-                _statusLabel.alignment = TextAnchor.MiddleLeft;
-                srt.anchorMin = new Vector2(0f, 0f);
-                srt.anchorMax = new Vector2(0f, 0f);
-                srt.pivot = new Vector2(0f, 0f);
-                srt.anchoredPosition = new Vector2(24f, 58f);
-            }
-            else
-            {
-                _statusLabel.alignment = TextAnchor.MiddleRight;
-                srt.anchorMin = new Vector2(1f, 0f);
-                srt.anchorMax = new Vector2(1f, 0f);
-                srt.pivot = new Vector2(1f, 0f);
-                srt.anchoredPosition = new Vector2(-24f, 58f);
-            }
-
+            srt.anchorMin = new Vector2(0.5f, 0f);
+            srt.anchorMax = new Vector2(0.5f, 0f);
+            srt.pivot = new Vector2(0.5f, 0f);
+            srt.anchoredPosition = new Vector2(0f, 58f);
             srt.sizeDelta = new Vector2(560f, 28f);
             RefreshPadUi();
         }

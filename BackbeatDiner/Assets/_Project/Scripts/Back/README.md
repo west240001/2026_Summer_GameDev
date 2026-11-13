@@ -4,7 +4,7 @@
 
 プロト順：レーンHUDダミー → 譜面1曲分のタイムライン読み込み枠。
 
-縦スライスでは `RhythmClock` / `NoteHighway` / `HitInput` を `VerticalSlicePrototype` 左側で再利用。ローカル2P: **WASD+Space**=ヒット、**A/S/D/F**=Beat-B1..B4。Perfect/Good が共有 `DaySessionState` の **仕込み** を増やす。
+縦スライスでは `RhythmClock` / `NoteHighway` / `HitInput` を `VerticalSlicePrototype` の **裏全画面** で再利用（2デバイス・1役/画面）。**WASD+Space**=ヒット、**A/S/D/F**=Beat-B1..B4。Perfect/Good が共有 `DaySessionState` の **仕込み** を増やす。
 
 | Script | Role |
 |--------|------|
