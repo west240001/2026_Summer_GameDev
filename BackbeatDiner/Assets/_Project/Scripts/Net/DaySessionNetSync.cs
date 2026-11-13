@@ -1,6 +1,7 @@
 using BackbeatDiner.Core;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BackbeatDiner.Net
 {
