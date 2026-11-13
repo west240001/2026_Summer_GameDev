@@ -6,7 +6,7 @@ namespace BackbeatDiner.Coop
 {
     /// <summary>
     /// Front-side receive feedback for KG-3 beats: screen-edge pulse + optional a11y waveform strip.
-    /// Listens to <see cref="BeatLexiconDemo.MotifSent"/> and a simulated back-beat (B / auto).
+    /// Listens to <see cref="BeatLexiconDemo.MotifSent"/> (Beat-B*/F* pads) and a simulated back-beat (B / auto).
     /// Japanese toast is tutorial-only (first pulse).
     /// </summary>
     public sealed class BeatReceivePulse : MonoBehaviour

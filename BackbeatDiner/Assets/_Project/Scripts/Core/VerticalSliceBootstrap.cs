@@ -46,7 +46,7 @@ namespace BackbeatDiner.Core
             var inventory = systems.AddComponent<InventoryBar>();
             var cook = systems.AddComponent<InstantCookInput>();
             var serveRhythm = systems.AddComponent<ServeRhythmWindow>();
-            systems.AddComponent<BeatLexiconDemo>();
+            var beatLexicon = systems.AddComponent<BeatLexiconDemo>();
 
             if (metronomeClick == null)
             {
@@ -85,10 +85,12 @@ namespace BackbeatDiner.Core
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody);
             serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback);
             cook.Configure(session, queue, cookFeedback, serveRhythm);
+            // 表役: Beat-F1..F4、8s/同一20s CD、配膳中 FrontCommsSendLocked
+            beatLexicon.Configure(BeatRole.Front, createPadUi: true);
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — Space=裏ヒット, F/Enter=インスタントクック→配膳リズム(Space/J/K), 1–4=コミュ(配膳中ロック), ~32拍 or 30s で結果.");
+            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — Space=裏ヒット, F/Enter=インスタントクック→配膳リズム(Space/J/K), 1–4=Beat-F1..F4(8s/同一20s・配膳中ロック), ~32拍 or 30s で結果.");
         }
 
         private void ResolveMaterials()
@@ -291,7 +293,7 @@ namespace BackbeatDiner.Core
                 new Vector2(-24f, -186f), TextAnchor.UpperRight, 16, Teal);
 
             EnsureLabel(canvasGo.transform, "HelpLabel",
-                "左: Space / A = ヒット　　右: F / Enter → 配膳リズム（Space / J·K）　　1–4=コミュ（配膳中ロック）　　約32拍 or 30秒で終了",
+                "左: Space / A = ヒット　　右: F / Enter → 配膳　　1–4=Beat-F（ビジー/大口/在庫赤/ラスト客・8s CD）　　約32拍 or 30秒で終了",
                 new Vector2(0f, 28f), TextAnchor.LowerCenter, 16, Gold);
 
             var rowGo = canvasGo.transform.Find("InventoryRow");

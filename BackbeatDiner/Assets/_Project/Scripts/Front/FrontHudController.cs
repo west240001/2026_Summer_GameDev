@@ -1,3 +1,4 @@
+using BackbeatDiner.Coop;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,6 +6,7 @@ namespace BackbeatDiner.Front
 {
     /// <summary>
     /// Week2 front HUD shell: 客待ち / 在庫 / クォータ / CD (Japanese labels).
+    /// When a <see cref="BeatLexiconDemo"/> is bound, CD reflects KG-3 beat cooldowns.
     /// </summary>
     public sealed class FrontHudController : MonoBehaviour
     {
@@ -25,22 +27,30 @@ namespace BackbeatDiner.Front
         private float _cooldownRemaining;
         private InventoryBar _inventory;
         private DummyCustomerQueue _queue;
+        private BeatLexiconDemo _beatLexicon;
+        private bool _driveQuotaDemo = true;
 
-        public void Configure(InventoryBar inventory, DummyCustomerQueue queue)
+        public void Configure(InventoryBar inventory, DummyCustomerQueue queue, BeatLexiconDemo beatLexicon = null)
         {
             _inventory = inventory;
             _queue = queue;
+            _beatLexicon = beatLexicon;
             _cooldownRemaining = cooldownSeconds;
+            // Lexicon owns the CD bar when bound (pad UI + 8s/20s).
+            _driveQuotaDemo = beatLexicon == null;
             Refresh();
         }
 
         private void Update()
         {
-            _cooldownRemaining -= Time.deltaTime;
-            if (_cooldownRemaining <= 0f)
+            if (_driveQuotaDemo)
             {
-                _cooldownRemaining = cooldownSeconds;
-                quotaCurrent = Mathf.Min(quotaTarget, quotaCurrent + 1f);
+                _cooldownRemaining -= Time.deltaTime;
+                if (_cooldownRemaining <= 0f)
+                {
+                    _cooldownRemaining = cooldownSeconds;
+                    quotaCurrent = Mathf.Min(quotaTarget, quotaCurrent + 1f);
+                }
             }
 
             Refresh();
@@ -69,16 +79,20 @@ namespace BackbeatDiner.Front
                 quotaFill.fillAmount = quotaTarget > 0f ? Mathf.Clamp01(quotaCurrent / quotaTarget) : 0f;
             }
 
-            if (cooldownLabel != null)
+            // BeatLexiconDemo refreshes bound CD label/fill itself; only demo CD when unbound.
+            if (_beatLexicon == null)
             {
-                cooldownLabel.text = $"CD: {_cooldownRemaining:0.0}s";
-            }
+                if (cooldownLabel != null)
+                {
+                    cooldownLabel.text = $"CD: {_cooldownRemaining:0.0}s";
+                }
 
-            if (cooldownFill != null)
-            {
-                cooldownFill.fillAmount = cooldownSeconds > 0f
-                    ? Mathf.Clamp01(_cooldownRemaining / cooldownSeconds)
-                    : 0f;
+                if (cooldownFill != null)
+                {
+                    cooldownFill.fillAmount = cooldownSeconds > 0f
+                        ? Mathf.Clamp01(_cooldownRemaining / cooldownSeconds)
+                        : 0f;
+                }
             }
         }
 

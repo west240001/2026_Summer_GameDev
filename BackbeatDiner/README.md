@@ -28,7 +28,7 @@
 | 操作 | 内容 |
 |------|------|
 | **Space** または **Gamepad South (A)** | ヒット判定（Perfect ±40ms / Good ±80ms）。画面に **判定 / コンボ / BPM**、Console にもログ |
-| **1 / 2 / 3 / 4** | KG-3 ビートコミュ用プレースホルダ SE（手続き生成モチーフ） |
+| **1 / 2 / 3 / 4** | KG-3 **Beat-B1..B4**（プッシュ／クリア／スナップ前／あとで）。CD **8s**／同一モチーフ **20s**。日本語パッド UI |
 | メトロノーム | `Assets/_Project/Audio/MetronomeClick.wav`（手続き PCM・ライセンスは同フォルダ `AUDIO_LICENSE.md`） |
 
 シーンが未生成のとき: Unity メニュー **BACKBEAT DINER → Build Rhythm Prototype Scene** で `RhythmPrototype.unity` を作成し Build Settings 先頭に登録します。エディタがプロジェクトをロックしている場合は **Assets → Refresh** 後に再 Play してください。
@@ -38,8 +38,9 @@
 | 操作 | 内容 |
 |------|------|
 | （表示のみ） | ローポリ客 1〜3 人＋タイムアウトバー、日本語 HUD（**客待ち / 在庫 / クォータ / CD**） |
-| **1 / 2 / 3 / 4** | ビート送信 SE → 表側 **エッジパルス**＋波形ストリップ（a11y） |
+| **1 / 2 / 3 / 4** | **Beat-F1..F4**（ビジー／ビッグオーダー／在庫赤／ラスト客）送信 SE → **エッジパルス**＋波形。CD **8s**／同一 **20s**。日本語パッド |
 | **B** | 裏ビート受信のシミュレート（自動パルスもあり） |
+| HUD CD | `BeatLexicon` 連動（準備OK / 残り秒 / 配膳ロック） |
 | 初回のみ | 日本語チュートリアルトースト「裏からのビートを受信しました」 |
 
 ブランド色マテリアル: `Assets/_Project/Art/Materials/BrandGold.mat`（`#C9A227`）/ `BrandTeal.mat`（`#1A6B6B`）。再生成は **BACKBEAT DINER → Build Front Shell Prototype Scene**。
@@ -53,7 +54,7 @@
 | **Space** または **Gamepad South (A)** | 裏レーンヒット（Perfect/Good → 仕込み +2/+1）。**配膳ウィンドウ中は無効**（Space は配膳用） |
 | **F** / **Enter** または **Gamepad West (X)** | インスタントクック → **配膳リズム**（1〜2小節）を開く |
 | **Space** / **J·K**（配膳中） | S1 拍合わせ。Perfect チップ×1.5 / Good×1 / Miss＝基本売上のみ（チップなし） |
-| **1 / 2 / 3 / 4** | ビートコミュ送信（**配膳中はロック** — `FrontCommsSendLocked`） |
+| **1 / 2 / 3 / 4** | **Beat-F1..F4** 送信（CD 8s／同一20s）。**配膳中はロック** — `FrontCommsSendLocked` |
 | 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
 | HUD | 仕込み / 提供 / **配膳リズム** / 残り時間・ビート、在庫バー（表） |
 
@@ -75,9 +76,9 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 
 ## 次のプロト手順（ローカル2P first）
 
-1. **Week 1 — リズム tick**（着手済み）: `RhythmClock` + メトロノーム WAV + `HitInput` / `NoteHighway` / `BeatLexiconDemo`。シーン `RhythmPrototype`。
-2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse`。裏レーンは Week1 `RhythmPrototype` を併用。
-3. **ビート送信プロト**：C3 モチーフ1種の SE + 相手側パルス（KG-3）— キー1–4 の SE と受信パルスは仮置き済み。
+1. **Week 1 — リズム tick**（着手済み）: `RhythmClock` + メトロノーム WAV + `HitInput` / `NoteHighway` / `BeatLexicon`（Beat-B*）。シーン `RhythmPrototype`。
+2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse` / **Beat-F* パッド＋CD**。裏レーンは Week1 `RhythmPrototype` を併用。
+3. **ビート送信プロト**（着手済み）: KG-3 C3 **BeatLexicon**（B1..F4 静的定義、8s／同一20s CD、日本語パッド、配膳中ロック）。
 4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — 裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`（仕込み/提供）、結果オーバーレイ。
 5. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
 

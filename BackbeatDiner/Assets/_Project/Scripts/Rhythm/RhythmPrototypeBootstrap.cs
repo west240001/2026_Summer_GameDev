@@ -29,7 +29,7 @@ namespace BackbeatDiner.Rhythm
             systems.AddComponent<AudioSource>();
             var highway = systems.AddComponent<NoteHighway>();
             var hitInput = systems.AddComponent<HitInput>();
-            systems.AddComponent<BeatLexiconDemo>();
+            var beatLexicon = systems.AddComponent<BeatLexiconDemo>();
 
             if (metronomeClick == null)
             {
@@ -51,9 +51,11 @@ namespace BackbeatDiner.Rhythm
             var hud = EnsureHud(out var judgement, out var combo, out var bpmLabel);
             hitInput.Configure(clock, highway, judgement, combo, bpmLabel);
             hitInput.Window = JudgeWindow.Default;
+            // 裏役: Beat-B1..B4（プッシュ/クリア/スナップ前/あとで）
+            beatLexicon.Configure(BeatRole.Back, createPadUi: true);
 
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] Week1 RhythmPrototype ready — Space=hit, 1-4=beat lexicon.");
+            Debug.Log("[BACKBEAT DINER] Week1 RhythmPrototype ready — Space=hit, 1-4=Beat-B1..B4 (8s / same 20s).");
         }
 
         private static AudioClip LoadMetronomeClip()
@@ -180,7 +182,7 @@ namespace BackbeatDiner.Rhythm
             judgement = EnsureLabel(canvasGo.transform, "JudgementLabel", "判定: —", new Vector2(0f, -40f), 36);
             combo = EnsureLabel(canvasGo.transform, "ComboLabel", "コンボ: 0", new Vector2(0f, -90f), 28);
             bpm = EnsureLabel(canvasGo.transform, "BpmLabel", "BPM: 120", new Vector2(0f, -130f), 24);
-            EnsureLabel(canvasGo.transform, "HelpLabel", "Space / A = ヒット　1–4 = ビート送信", new Vector2(0f, 40f), 22);
+            EnsureLabel(canvasGo.transform, "HelpLabel", "Space / A = ヒット　1–4 = Beat-B（プッシュ/クリア/スナップ前/あとで）", new Vector2(0f, 40f), 20);
 
             return canvasGo.GetComponent<Canvas>();
         }

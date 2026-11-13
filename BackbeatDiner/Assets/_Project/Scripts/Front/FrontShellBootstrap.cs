@@ -29,7 +29,7 @@ namespace BackbeatDiner.Front
             var queue = systems.AddComponent<DummyCustomerQueue>();
             var inventory = systems.AddComponent<InventoryBar>();
             var hud = systems.AddComponent<FrontHudController>();
-            systems.AddComponent<BeatLexiconDemo>();
+            var beatLexicon = systems.AddComponent<BeatLexiconDemo>();
             systems.AddComponent<BeatReceivePulse>();
 
             var queueRoot = GameObject.Find("CustomerQueueRoot")?.transform;
@@ -45,10 +45,12 @@ namespace BackbeatDiner.Front
                 out var quotaFill, out var cdFill, out var invRow);
             inventory.BuildUi(invRow);
             hud.BindLabels(waiting, invLabel, quota, cd, quotaFill, cdFill);
-            hud.Configure(inventory, queue);
+            // 表: Beat-F1..F4 日本語パッド + 8s / 同一モチーフ 20s CD → HUD CD バー
+            beatLexicon.Configure(BeatRole.Front, cd, cdFill, createPadUi: true);
+            hud.Configure(inventory, queue, beatLexicon);
 
             _ = canvas;
-            Debug.Log("[BACKBEAT DINER] Week2 FrontShellPrototype ready — 客待ち/在庫/クォータ/CD, 1-4=ビート, B=シミュレート受信.");
+            Debug.Log("[BACKBEAT DINER] Week2 FrontShellPrototype ready — 客待ち/在庫/クォータ/Beat CD(8s), 1-4=Beat-F1..F4, B=シミュレート受信.");
         }
 
         private void ResolveMaterials()
@@ -108,7 +110,7 @@ namespace BackbeatDiner.Front
             inventory = EnsureLabel(canvasGo.transform, "InventoryLabel", "在庫: —", new Vector2(24f, -64f), TextAnchor.UpperLeft, 22);
             quota = EnsureLabel(canvasGo.transform, "QuotaLabel", "クォータ: 0/8", new Vector2(-24f, -24f), TextAnchor.UpperRight, 24);
             cooldown = EnsureLabel(canvasGo.transform, "CooldownLabel", "CD: —", new Vector2(-24f, -64f), TextAnchor.UpperRight, 22);
-            EnsureLabel(canvasGo.transform, "HelpLabel", "1–4 = ビート送信　B = 裏ビート受信シミュレート", new Vector2(0f, 28f), TextAnchor.LowerCenter, 20);
+            EnsureLabel(canvasGo.transform, "HelpLabel", "1–4 = Beat-F（ビジー/大口/在庫赤/ラスト客）　B = 裏ビート受信シミュレート　CD 8s / 同一20s", new Vector2(0f, 28f), TextAnchor.LowerCenter, 18);
 
             quotaFill = EnsureBar(canvasGo.transform, "QuotaBar", new Vector2(-24f, -100f), TextAnchor.UpperRight, FrontHudController.Gold);
             cooldownFill = EnsureBar(canvasGo.transform, "CooldownBar", new Vector2(-24f, -130f), TextAnchor.UpperRight, FrontHudController.Teal);

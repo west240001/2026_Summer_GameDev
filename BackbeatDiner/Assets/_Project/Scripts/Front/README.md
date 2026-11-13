@@ -5,7 +5,7 @@
 | Script | Role |
 |--------|------|
 | `FrontShellBootstrap` | Week2 表シーンのランタイム組み立て |
-| `FrontHudController` | 日本語 HUD：客待ち / 在庫 / クォータ / CD |
+| `FrontHudController` | 日本語 HUD：客待ち / 在庫 / クォータ / **Beat CD**（`BeatLexiconDemo` 連動可） |
 | `DummyCustomerQueue` | ローポリ客 1〜3＋タイムアウトバー（`TryServeOldest` 対応） |
 | `InventoryBar` | 偽在庫カテゴリ（teal / gold） |
 | `InstantCookInput` | v0 一ボタン Instant Cook（F / Enter / West）→ `ServeRhythmWindow` |

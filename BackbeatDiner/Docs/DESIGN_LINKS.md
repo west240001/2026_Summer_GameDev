@@ -21,7 +21,8 @@
 - **音声チャットなし**。意味の固定された **短いビートモチーフ**（C3 レキシコン）が主通信。
 - **C1/C2**：資源スナップショット要求・返送（時間コスト付き表操作）。
 - **受信は聴覚主**、HUDは最小（CD・種別バッジ）。Chart B 高密度・配膳ウィンドウ中は送信制限。
-- **実装アンカー**：`Assets/_Project/Scripts/Coop/` — モチーフ再生、CD、相手側パルス／空間SE。
+- **C3 レキシコン**：Beat-B1..B4／F1..F4。CD **8s**／同一モチーフ **20s**。配膳中は表送信不可（`FrontCommsSendLocked`）。
+- **実装アンカー**：`Assets/_Project/Scripts/Coop/` — `BeatLexicon`（静的定義）、`BeatLexiconDemo`（パッド＋CD）、`BeatReceivePulse`。
 
 ## KG-5 — 表（フロント）・調理・客
 
