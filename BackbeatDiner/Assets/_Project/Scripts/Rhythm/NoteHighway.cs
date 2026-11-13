@@ -88,6 +88,21 @@ namespace BackbeatDiner.Rhythm
             }
         }
 
+        /// <summary>Destroy active note visuals and reset chart spawn cursor.</summary>
+        public void ClearActiveNotes()
+        {
+            for (var i = _notes.Count - 1; i >= 0; i--)
+            {
+                if (_notes[i].Go != null)
+                {
+                    Destroy(_notes[i].Go);
+                }
+            }
+
+            _notes.Clear();
+            _nextChartIndex = 0;
+        }
+
         /// <summary>Load authored chart notes (sorted by time). Null clears chart mode.</summary>
         public void LoadChart(ChartDefinition definition)
         {

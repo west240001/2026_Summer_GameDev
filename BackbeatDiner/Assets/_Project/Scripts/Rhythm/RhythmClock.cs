@@ -96,9 +96,14 @@ namespace BackbeatDiner.Rhythm
             }
 
             var now = AudioSettings.dspTime;
-            while (_nextBeatDspTime <= now + scheduleLookAhead)
+            while (_running && _nextBeatDspTime <= now + scheduleLookAhead)
             {
                 FireBeat(_beatIndex, _nextBeatDspTime);
+                if (!_running)
+                {
+                    break;
+                }
+
                 _beatIndex++;
                 _nextBeatDspTime += SecondsPerBeat;
             }

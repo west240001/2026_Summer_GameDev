@@ -20,6 +20,7 @@ namespace BackbeatDiner.Core
         [SerializeField] private float maxSeconds = 30f;
         [SerializeField] private int perfectPrep = 2;
         [SerializeField] private int goodPrep = 1;
+        [SerializeField] private bool endSessionOnChartComplete = true;
 
         private RhythmClock _clock;
         private HitInput _hitInput;
@@ -39,6 +40,7 @@ namespace BackbeatDiner.Core
         private float _elapsed;
         private bool _ended;
         private bool _running;
+        private bool _chartCompleteLatched;
 
         public int PrepUnits => _prepUnits;
         public int ServedCount => _servedCount;
@@ -49,6 +51,13 @@ namespace BackbeatDiner.Core
 
         public event Action OnSessionEnded;
 
+        /// <summary>
+        /// Fired when the current chart's beat budget is exhausted.
+        /// When <see cref="endSessionOnChartComplete"/> is false (setlist mode),
+        /// the day continues until <see cref="EndDay"/>.
+        /// </summary>
+        public event Action OnChartCompleted;
+
         /// <summary>Apply chart length (beats) from a <see cref="ChartDefinition"/>.</summary>
         public void ApplyChart(ChartDefinition chart)
         {
@@ -58,6 +67,53 @@ namespace BackbeatDiner.Core
             }
 
             maxBeats = Mathf.Max(1, Mathf.RoundToInt(chart.LengthBeats));
+            _chartCompleteLatched = false;
+        }
+
+        /// <summary>
+        /// When false, chart completion only stops the clock / hit input and raises
+        /// <see cref="OnChartCompleted"/> (used by <see cref="DaySetlistRunner"/>).
+        /// </summary>
+        public void SetEndSessionOnChartComplete(bool value)
+        {
+            endSessionOnChartComplete = value;
+        }
+
+        /// <summary>Expand day time budget for a multi-chart setlist (+ buffer).</summary>
+        public void ApplySetlistBudget(SetlistDefinition setlist)
+        {
+            if (setlist == null)
+            {
+                return;
+            }
+
+            var charts = setlist.Charts;
+            var total = 0f;
+            var valid = 0;
+            for (var i = 0; i < charts.Length; i++)
+            {
+                var c = charts[i];
+                if (c == null)
+                {
+                    continue;
+                }
+
+                total += (c.LengthBeats / c.Bpm) * 60f;
+                valid++;
+            }
+
+            if (valid > 1)
+            {
+                total += setlist.GapSeconds * (valid - 1);
+            }
+
+            maxSeconds = Mathf.Max(maxSeconds, total + 20f);
+        }
+
+        /// <summary>End the day from setlist / external flow (shows 営業終了 overlay).</summary>
+        public void EndDay(string reason)
+        {
+            EndSession(string.IsNullOrWhiteSpace(reason) ? "セットリスト終了" : reason);
         }
 
         public void Bind(
@@ -112,6 +168,7 @@ namespace BackbeatDiner.Core
             _elapsed = 0f;
             _ended = false;
             _running = true;
+            _chartCompleteLatched = false;
             if (_resultRoot != null)
             {
                 _resultRoot.SetActive(false);
@@ -228,8 +285,35 @@ namespace BackbeatDiner.Core
         {
             _ = scheduledDsp;
             // BeatIndex after FireBeat has already advanced; fire uses the index being fired.
-            // End when the fired beat reaches maxBeats-1 (0-based → 32nd beat is index 31).
+            // Complete chart when the fired beat reaches maxBeats-1 (0-based → 32nd beat is index 31).
             if (!_ended && beatIndex + 1 >= maxBeats)
+            {
+                CompleteCurrentChart();
+            }
+        }
+
+        private void CompleteCurrentChart()
+        {
+            if (_ended || _chartCompleteLatched)
+            {
+                return;
+            }
+
+            _chartCompleteLatched = true;
+            if (_clock != null)
+            {
+                _clock.StopClock();
+            }
+
+            if (_hitInput != null)
+            {
+                _hitInput.InputEnabled = false;
+            }
+
+            Debug.Log($"[DaySessionState] Chart complete (beats={maxBeats}) endSession={endSessionOnChartComplete}");
+            OnChartCompleted?.Invoke();
+
+            if (endSessionOnChartComplete)
             {
                 EndSession("チャート終了");
             }

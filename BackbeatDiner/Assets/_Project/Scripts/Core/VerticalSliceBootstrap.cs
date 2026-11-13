@@ -26,6 +26,7 @@ namespace BackbeatDiner.Core
 
         [SerializeField] private AudioClip metronomeClick;
         [SerializeField] private ChartDefinition chart;
+        [SerializeField] private SetlistDefinition setlist;
         [SerializeField] private float bpm = 120f;
         [SerializeField] private bool buildPlaceholders = true;
         [SerializeField] private Material goldMaterial;
@@ -65,9 +66,19 @@ namespace BackbeatDiner.Core
                 metronomeClick = Resources.Load<AudioClip>("MetronomeClick") ?? BuildProceduralClick();
             }
 
+            if (setlist == null)
+            {
+                setlist = Resources.Load<SetlistDefinition>("Setlists/Setlist_DemoDay");
+            }
+
             if (chart == null)
             {
                 chart = Resources.Load<ChartDefinition>("Charts/Chart_DemoA");
+            }
+
+            if (setlist != null && setlist.Charts.Length > 0 && setlist.Charts[0] != null)
+            {
+                chart = setlist.Charts[0];
             }
 
             clock.AssignMetronomeClip(metronomeClick);
@@ -106,7 +117,7 @@ namespace BackbeatDiner.Core
                 out var prep, out var serve, out var timer, out var cookFeedback,
                 out var invRow, out var resultRoot, out var resultTitle, out var resultBody,
                 out var sessionFill, out var prepFill, out var serveFill, out var serveMeter,
-                out var retryButton, out var titleButton);
+                out var retryButton, out var titleButton, out var chartNameLabel);
 
             inventory.BuildUi(invRow);
             // Local 2P: Back WASD+Space hits stay live during Front serve (J·K).
@@ -122,10 +133,30 @@ namespace BackbeatDiner.Core
             backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
             frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
 
-            session.Begin();
-            clock.StartClock(0.35);
-            var chartLabel = chart != null ? chart.name : "(fallback every-beat)";
-            Debug.Log($"[BACKBEAT DINER] VerticalSlicePrototype ready — chart={chartLabel}; kitchen BACK + diner FRONT; local 2P.");
+            var useSetlist = setlist != null && setlist.ChartCount >= 1;
+            if (useSetlist)
+            {
+                var runner = systems.AddComponent<DaySetlistRunner>();
+                runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel);
+                runner.StartSetlist(0.35);
+                Debug.Log(
+                    $"[BACKBEAT DINER] VerticalSlicePrototype ready — setlist={setlist.name} " +
+                    $"charts={setlist.ChartCount} gap={setlist.GapSeconds:0.#}s; kitchen BACK + diner FRONT; local 2P.");
+            }
+            else
+            {
+                if (chartNameLabel != null)
+                {
+                    chartNameLabel.text = chart != null
+                        ? $"チャート名: {chart.DisplayName}"
+                        : "チャート名: —";
+                }
+
+                session.Begin();
+                clock.StartClock(0.35);
+                var chartLabel = chart != null ? chart.DisplayName : "(fallback every-beat)";
+                Debug.Log($"[BACKBEAT DINER] VerticalSlicePrototype ready — chart={chartLabel}; kitchen BACK + diner FRONT; local 2P.");
+            }
         }
 
         private void ResolveMaterials()
@@ -613,7 +644,8 @@ namespace BackbeatDiner.Core
             out Image serveFill,
             out Image serveMeter,
             out Button retryButton,
-            out Button titleButton)
+            out Button titleButton,
+            out Text chartNameLabel)
         {
             var canvasGo = GameObject.Find("VerticalSliceHUD");
             if (canvasGo == null)
@@ -635,6 +667,10 @@ namespace BackbeatDiner.Core
             logo.rectTransform.sizeDelta = new Vector2(640f, 40f);
             EnsureLabel(canvasGo.transform, "BrandSub", "バックビート・ダイナー", new Vector2(0f, -42f),
                 TextAnchor.UpperCenter, 14, Teal).rectTransform.sizeDelta = new Vector2(480f, 24f);
+
+            chartNameLabel = EnsureLabel(canvasGo.transform, "ChartNameLabel", "チャート名: —",
+                new Vector2(0f, -62f), TextAnchor.UpperCenter, 18, Gold);
+            chartNameLabel.rectTransform.sizeDelta = new Vector2(560f, 28f);
 
             EnsurePanel(canvasGo.transform, "SplitDivider", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(5f, 0f), new Color(Gold.r, Gold.g, Gold.b, 0.65f));
@@ -658,7 +694,7 @@ namespace BackbeatDiner.Core
 
             prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-28f, -112f), TextAnchor.UpperRight, 24, Gold);
             serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-28f, -146f), TextAnchor.UpperRight, 24, Teal);
-            timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -78f), TextAnchor.UpperCenter, 18, Gold);
+            timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -92f), TextAnchor.UpperCenter, 18, Gold);
             cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
                 new Vector2(-28f, -210f), TextAnchor.UpperRight, 15, Gold);
             SetLabelText(cookFeedback, LocalTwoPlayerBindings.HudFrontCookHint);

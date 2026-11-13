@@ -13,9 +13,16 @@ namespace BackbeatDiner.Rhythm
         order = 10)]
     public sealed class ChartDefinition : ScriptableObject
     {
+        [Tooltip("Japanese HUD label (チャート名). Falls back to asset name when empty.")]
+        [SerializeField] private string displayName = "";
+
         [SerializeField] private float bpm = 120f;
         [SerializeField] private float lengthBeats = 32f;
         [SerializeField] private ChartNote[] notes = Array.Empty<ChartNote>();
+
+        /// <summary>HUD-facing chart name (Japanese preferred).</summary>
+        public string DisplayName =>
+            string.IsNullOrWhiteSpace(displayName) ? name : displayName.Trim();
 
         public float Bpm => Mathf.Max(1f, bpm);
 

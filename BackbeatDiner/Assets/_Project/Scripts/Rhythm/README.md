@@ -4,7 +4,9 @@ Week 1 vertical slice:
 
 | Script | Role |
 |--------|------|
-| `ChartDefinition` | ScriptableObject chart: `bpm` / `lengthBeats` / notes (`timeBeats`+`lane`). Create menu **BACKBEAT DINER → Chart Definition**. Sample: `Resources/Charts/Chart_DemoA` |
+| `ChartDefinition` | ScriptableObject chart: `displayName` / `bpm` / `lengthBeats` / notes (`timeBeats`+`lane`). Create menu **BACKBEAT DINER → Chart Definition**. Samples: `Resources/Charts/Chart_DemoA`, `Chart_DemoB` |
+| `SetlistDefinition` | Day setlist SO: ordered charts + `gapSeconds`. Sample: `Resources/Setlists/Setlist_DemoDay` (A→gap→B) |
+| `DaySetlistRunner` | VerticalSlice multi-chart flow; Japanese HUD `チャート名` |
 | `RhythmClock` | BPM + `AudioSettings.dspTime` beat schedule / `OnBeat`; `ApplyChart` |
 | `JudgeWindow` | Perfect ±40ms / Good ±80ms |
 | `NoteHighway` | Chart-driven (or every-beat fallback) scrolling notes toward hit line |

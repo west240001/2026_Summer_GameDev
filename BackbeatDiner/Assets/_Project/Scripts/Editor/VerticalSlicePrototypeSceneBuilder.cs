@@ -21,6 +21,7 @@ namespace BackbeatDiner.Editor
         private const string NavyMatPath = "Assets/_Project/Art/Materials/BrandNavy.mat";
         private const string ClickPath = "Assets/_Project/Audio/MetronomeClick.wav";
         private const string ChartPath = "Assets/_Project/Resources/Charts/Chart_DemoA.asset";
+        private const string SetlistPath = "Assets/_Project/Resources/Setlists/Setlist_DemoDay.asset";
 
         [MenuItem("BACKBEAT DINER/Build Vertical Slice Prototype Scene")]
         public static void BuildFromMenu()
@@ -98,6 +99,7 @@ namespace BackbeatDiner.Editor
             var navy = AssetDatabase.LoadAssetAtPath<Material>(NavyMatPath);
             var click = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickPath);
             var chart = AssetDatabase.LoadAssetAtPath<ChartDefinition>(ChartPath);
+            var setlist = AssetDatabase.LoadAssetAtPath<SetlistDefinition>(SetlistPath);
             var so = new SerializedObject(bootstrap);
             so.FindProperty("buildPlaceholders").boolValue = true;
             so.FindProperty("bpm").floatValue = chart != null ? chart.Bpm : 120f;
@@ -119,6 +121,12 @@ namespace BackbeatDiner.Editor
             if (chartProp != null && chart != null)
             {
                 chartProp.objectReferenceValue = chart;
+            }
+
+            var setlistProp = so.FindProperty("setlist");
+            if (setlistProp != null && setlist != null)
+            {
+                setlistProp.objectReferenceValue = setlist;
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
