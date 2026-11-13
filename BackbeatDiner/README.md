@@ -18,10 +18,23 @@
 1. [Unity Hub](https://unity.com/download) をインストールし、エディタ **6000.0.28f1**（または同等の 6000.0.x LTS）を追加します。
 2. **Projects → Add →** リポジトリ内の **`BackbeatDiner`** フォルダを選択します（リポジトリルートではありません）。
 3. 初回起動で **URP / Input System** のパッケージ解決と、必要に応じた **プロジェクト設定のアップグレード** が走ります。差分はレビューしてコミットしてください。
-4. **Week 1 リズム試作**: `Assets/_Project/Scenes/RhythmPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Rhythm Prototype Scene**、または batchmode で `RhythmPrototypeSceneBuilder.BuildFromCommandLine`）。
-5. **Week 2 表 HUD 殻**: `Assets/_Project/Scenes/FrontShellPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Front Shell Prototype Scene**、または batchmode で `FrontShellPrototypeSceneBuilder.BuildFromCommandLine`）。
-6. **縦スライス（1チャート＋表ミニ）**: `Assets/_Project/Scenes/VerticalSlicePrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Vertical Slice Prototype Scene**、または batchmode で `VerticalSlicePrototypeSceneBuilder.BuildFromCommandLine`）。
-7. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
+4. **タイトル／営業開始**: `Assets/_Project/Scenes/TitleMenu.unity` を開き **Play**（Build Settings 先頭。無い場合は **BACKBEAT DINER → Build Title Menu Scene**、または batchmode で `TitleMenuSceneBuilder.BuildFromCommandLine`）。
+5. **Week 1 リズム試作**: `Assets/_Project/Scenes/RhythmPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Rhythm Prototype Scene**、または batchmode で `RhythmPrototypeSceneBuilder.BuildFromCommandLine`）。
+6. **Week 2 表 HUD 殻**: `Assets/_Project/Scenes/FrontShellPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Front Shell Prototype Scene**、または batchmode で `FrontShellPrototypeSceneBuilder.BuildFromCommandLine`）。
+7. **縦スライス（1チャート＋表ミニ）**: `Assets/_Project/Scenes/VerticalSlicePrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Vertical Slice Prototype Scene**、または batchmode で `VerticalSlicePrototypeSceneBuilder.BuildFromCommandLine`）。
+8. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
+
+## タイトルメニュー — 営業開始フロー（操作）
+
+Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャッチコピー「見えない相棒と、最高の一皿を。」。**営業開始**で縦スライス日を開始します。
+
+| 操作 | 内容 |
+|------|------|
+| **営業開始**（クリック） | `VerticalSlicePrototype` をロード（1営業日縦スライス開始） |
+| **Enter** / **Space** | 同上（キーボードショートカット） |
+
+シーン: `Assets/_Project/Scenes/TitleMenu.unity`（Build Settings **先頭**）  
+再生成: **BACKBEAT DINER → Build Title Menu Scene**（`TitleMenuController` / `TitleMenuSceneBuilder`）。
 
 ## Week 1 — Rhythm tick プロト（操作）
 
@@ -85,7 +98,8 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse` / **Beat-F* パッド＋CD**。裏レーンは Week1 `RhythmPrototype` を併用。
 3. **ビート送信プロト**（着手済み）: KG-3 C3 **BeatLexicon**（B1..F4 静的定義、8s／同一20s CD、日本語パッド、配膳中ロック）。
 4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — 裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`（仕込み/提供）、結果オーバーレイ。
-5. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
+5. **タイトル → 営業開始**（着手済み）: `TitleMenu`（Build Settings 先頭）→ **営業開始** で縦スライス日開始。
+6. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
 
 詳細マイルストーンは Cursor Project Context の **`docs/unity-production-plan.md`** を正本とします。リポジトリ内要約は `Docs/DESIGN_LINKS.md` を参照。
 

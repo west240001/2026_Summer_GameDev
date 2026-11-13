@@ -119,13 +119,29 @@ namespace BackbeatDiner.Editor
 
             if (setInBuildSettings)
             {
-                EditorBuildSettings.scenes = new[]
+                // Keep TitleMenu first when present (day-start flow).
+                var title = "Assets/_Project/Scenes/TitleMenu.unity";
+                if (File.Exists(title))
                 {
-                    new EditorBuildSettingsScene(ScenePath, true),
-                    new EditorBuildSettingsScene("Assets/_Project/Scenes/RhythmPrototype.unity", true),
-                    new EditorBuildSettingsScene("Assets/_Project/Scenes/FrontShellPrototype.unity", true),
-                    new EditorBuildSettingsScene("Assets/Scenes/Bootstrap.unity", true)
-                };
+                    EditorBuildSettings.scenes = new[]
+                    {
+                        new EditorBuildSettingsScene(title, true),
+                        new EditorBuildSettingsScene(ScenePath, true),
+                        new EditorBuildSettingsScene("Assets/_Project/Scenes/RhythmPrototype.unity", true),
+                        new EditorBuildSettingsScene("Assets/_Project/Scenes/FrontShellPrototype.unity", true),
+                        new EditorBuildSettingsScene("Assets/Scenes/Bootstrap.unity", true)
+                    };
+                }
+                else
+                {
+                    EditorBuildSettings.scenes = new[]
+                    {
+                        new EditorBuildSettingsScene(ScenePath, true),
+                        new EditorBuildSettingsScene("Assets/_Project/Scenes/RhythmPrototype.unity", true),
+                        new EditorBuildSettingsScene("Assets/_Project/Scenes/FrontShellPrototype.unity", true),
+                        new EditorBuildSettingsScene("Assets/Scenes/Bootstrap.unity", true)
+                    };
+                }
             }
 
             Debug.Log($"[VerticalSlicePrototypeSceneBuilder] Saved {ScenePath}");
