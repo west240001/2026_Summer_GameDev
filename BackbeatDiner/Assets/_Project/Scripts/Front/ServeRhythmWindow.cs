@@ -24,6 +24,7 @@ namespace BackbeatDiner.Front
         [SerializeField] private HitInput hitInput;
         [SerializeField] private InstantCookInput cookInput;
         [SerializeField] private Text hudLabel;
+        [SerializeField] private Image meterFill;
         [SerializeField] private JudgeWindow window = JudgeWindow.Default;
         [SerializeField] private int barCount = 2;
         [SerializeField] private float perfectTipMult = 1.5f;
@@ -56,7 +57,8 @@ namespace BackbeatDiner.Front
             HitInput backHit,
             InstantCookInput cook,
             Text label,
-            bool twoPlayerSplit = false)
+            bool twoPlayerSplit = false,
+            Image rhythmMeter = null)
         {
             if (session != null)
             {
@@ -68,12 +70,15 @@ namespace BackbeatDiner.Front
             hitInput = backHit;
             cookInput = cook;
             hudLabel = label;
+            meterFill = rhythmMeter;
             localTwoPlayerSplit = twoPlayerSplit;
 
             if (session != null)
             {
                 session.OnSessionEnded += HandleSessionEnded;
             }
+
+            SetMeter(0f, FrontHudController.Teal);
         }
 
         private void HandleSessionEnded()
@@ -132,6 +137,7 @@ namespace BackbeatDiner.Front
 
             var serveKeys = localTwoPlayerSplit ? "J·K" : "Space / J·K";
             SetHud($"配膳リズム — {serveKeys} で拍合わせ（{barCount}小節）", FrontHudController.Gold);
+            SetMeter(1f, FrontHudController.Gold);
             Debug.Log($"[ServeRhythmWindow] Open bars={barCount} deadlineDsp={_deadlineDsp:F3} patience={_patienceRatio:0.00}");
             return true;
         }
@@ -255,24 +261,31 @@ namespace BackbeatDiner.Front
 
             var tipNote = judgement == HitJudgement.Miss ? "チップなし（基本売上のみ）" : $"チップ×{tipMult:0.##}";
             SetHud($"配膳 {ToJapanese(judgement)} — {tipNote}", FrontHudController.Teal);
+            SetMeter(
+                judgement == HitJudgement.Miss ? 0.15f : judgement == HitJudgement.Perfect ? 1f : 0.7f,
+                judgement == HitJudgement.Miss ? FrontHudController.Gold : FrontHudController.Teal);
             Debug.Log($"[ServeRhythmWindow] Close {judgement} tipMult={tipMult:0.##} patience={_patienceRatio:0.00}");
             OnServeResolved?.Invoke(judgement, tipMult);
         }
 
         private void RefreshProgressHud(double now)
         {
-            if (hudLabel == null || clock == null)
+            if (clock == null)
             {
                 return;
             }
 
+            var total = Math.Max(0.0001, _deadlineDsp - _openedDsp);
             var remain = Math.Max(0.0, _deadlineDsp - now);
-            var beatsLeft = remain / clock.SecondsPerBeat;
-            if (_hitResolved)
+            var ratio = (float)(remain / total);
+            SetMeter(ratio, FrontHudController.Gold);
+
+            if (hudLabel == null || _hitResolved)
             {
                 return;
             }
 
+            var beatsLeft = remain / clock.SecondsPerBeat;
             var serveKeys = localTwoPlayerSplit ? "J·K" : "Space / J·K";
             hudLabel.text = $"配膳リズム — {serveKeys}  残り {beatsLeft:0.0}拍";
             hudLabel.color = FrontHudController.Gold;
@@ -287,6 +300,17 @@ namespace BackbeatDiner.Front
 
             hudLabel.text = text;
             hudLabel.color = color;
+        }
+
+        private void SetMeter(float amount, Color color)
+        {
+            if (meterFill == null)
+            {
+                return;
+            }
+
+            meterFill.fillAmount = Mathf.Clamp01(amount);
+            meterFill.color = color;
         }
 
         private static string ToJapanese(HitJudgement j) => j switch

@@ -275,12 +275,27 @@ namespace BackbeatDiner.Coop
                     rootRt.anchoredPosition = new Vector2(-24f, 72f);
                 }
 
-                rootRt.sizeDelta = new Vector2(420f, 120f);
+                rootRt.sizeDelta = new Vector2(460f, 132f);
             }
             else
             {
                 root.name = rootName;
                 rootRt = root.GetComponent<RectTransform>();
+            }
+
+            // Soft chrome behind pads
+            if (rootRt.Find("PadChrome") == null)
+            {
+                var chromeGo = new GameObject("PadChrome");
+                chromeGo.transform.SetParent(rootRt, false);
+                chromeGo.transform.SetAsFirstSibling();
+                var chrome = chromeGo.AddComponent<Image>();
+                chrome.color = new Color(0.03f, 0.07f, 0.1f, 0.78f);
+                var crt = chrome.rectTransform;
+                crt.anchorMin = Vector2.zero;
+                crt.anchorMax = Vector2.one;
+                crt.offsetMin = new Vector2(-10f, -10f);
+                crt.offsetMax = new Vector2(10f, 10f);
             }
 
             _padLabels = new Text[4];
@@ -295,21 +310,31 @@ namespace BackbeatDiner.Coop
                 {
                     var padGo = new GameObject(name);
                     padGo.transform.SetParent(rootRt, false);
-                    bg = padGo.AddComponent<Image>();
-                    bg.color = new Color(0.05f, 0.12f, 0.12f, 0.85f);
-                    var rt = bg.rectTransform;
+                    var frame = padGo.AddComponent<Image>();
+                    frame.color = new Color(FrontHudController.Gold.r, FrontHudController.Gold.g, FrontHudController.Gold.b, 0.55f);
+                    var rt = frame.rectTransform;
                     rt.anchorMin = new Vector2(0f, 0.5f);
                     rt.anchorMax = new Vector2(0f, 0.5f);
                     rt.pivot = new Vector2(0f, 0.5f);
-                    rt.sizeDelta = new Vector2(96f, 72f);
-                    rt.anchoredPosition = new Vector2(i * 104f, 0f);
+                    rt.sizeDelta = new Vector2(104f, 88f);
+                    rt.anchoredPosition = new Vector2(8f + i * 112f, 0f);
+
+                    var insetGo = new GameObject("Inset");
+                    insetGo.transform.SetParent(padGo.transform, false);
+                    bg = insetGo.AddComponent<Image>();
+                    bg.color = new Color(0.05f, 0.12f, 0.12f, 0.95f);
+                    var irt = bg.rectTransform;
+                    irt.anchorMin = Vector2.zero;
+                    irt.anchorMax = Vector2.one;
+                    irt.offsetMin = new Vector2(2f, 2f);
+                    irt.offsetMax = new Vector2(-2f, -2f);
 
                     var labelGo = new GameObject("Label");
                     labelGo.transform.SetParent(padGo.transform, false);
                     label = labelGo.AddComponent<Text>();
                     label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                                  ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-                    label.fontSize = 14;
+                    label.fontSize = 13;
                     label.alignment = TextAnchor.MiddleCenter;
                     label.color = FrontHudController.Gold;
                     label.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -322,7 +347,7 @@ namespace BackbeatDiner.Coop
                 }
                 else
                 {
-                    bg = existing.GetComponent<Image>();
+                    bg = existing.Find("Inset")?.GetComponent<Image>() ?? existing.GetComponent<Image>();
                     label = existing.Find("Label")?.GetComponent<Text>();
                     if (label == null)
                     {
