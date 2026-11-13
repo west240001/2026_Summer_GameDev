@@ -45,21 +45,22 @@
 
 ブランド色マテリアル: `Assets/_Project/Art/Materials/BrandGold.mat`（`#C9A227`）/ `BrandTeal.mat`（`#1A6B6B`）。再生成は **BACKBEAT DINER → Build Front Shell Prototype Scene**。
 
-## 縦スライス — 1チャート＋表ミニ（操作）
+## 縦スライス — 1チャート＋表ミニ（ローカル2P 操作）
 
-左右スプリット（左＝裏キッチン / 右＝表ダイナー）。共有資源は **仕込み**（裏ヒットで増加）と **提供**（表インスタントクック → **配膳リズム F1+** で消費）。
+左右スプリット（左＝裏キッチン / 右＝表ダイナー）。共有資源は **仕込み**（裏ヒットで増加）と **提供**（表インスタントクック → **配膳リズム F1+** で消費）。キーボード左右分割（`LocalTwoPlayerBindings`）。
 
-| 操作 | 内容 |
-|------|------|
-| **Space** または **Gamepad South (A)** | 裏レーンヒット（Perfect/Good → 仕込み +2/+1）。**配膳ウィンドウ中は無効**（Space は配膳用） |
-| **F** / **Enter** または **Gamepad West (X)** | インスタントクック → **配膳リズム**（1〜2小節）を開く |
-| **Space** / **J·K**（配膳中） | S1 拍合わせ。Perfect チップ×1.5 / Good×1 / Miss＝基本売上のみ（チップなし） |
-| **1 / 2 / 3 / 4** | **Beat-F1..F4** 送信（CD 8s／同一20s）。**配膳中はロック** — `FrontCommsSendLocked` |
-| 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
-| HUD | 仕込み / 提供 / **配膳リズム** / 残り時間・ビート、在庫バー（表） |
+| 役 | 操作 | 内容 |
+|----|------|------|
+| **裏** | **WASD + Space**（Gamepad South） | レーンヒット（Perfect/Good → 仕込み +2/+1）。配膳中も継続可 |
+| **裏** | **A / S / D / F** | **Beat-B1..B4**（プッシュ／クリア／スナップ前／あとで）。CD 8s／同一20s |
+| **表** | **Enter**（Gamepad West） | インスタントクック → **配膳リズム**（1〜2小節） |
+| **表** | **J · K**（配膳中） | S1 拍合わせ。Perfect チップ×1.5 / Good×1 / Miss＝基本売上のみ |
+| **表** | **← ↓ → ↑** | **Beat-F1..F4**。**配膳中は表のみロック** — `FrontCommsSendLocked` |
+| — | 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
+| — | HUD | 裏/表コントロール表記、仕込み / 提供 / 配膳 / ビートパッド（左=B* / 右=F*） |
 
 シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
-再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `InstantCookInput` / `ServeRhythmWindow`）。
+再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `LocalTwoPlayerBindings` / `InstantCookInput` / `ServeRhythmWindow`）。
 
 ## フォルダ構成（`Assets/_Project/`）
 

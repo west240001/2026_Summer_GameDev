@@ -8,6 +8,7 @@ namespace BackbeatDiner.Front
     /// <summary>
     /// v0 front mini: Instant Cook press → opens F1+ <see cref="ServeRhythmWindow"/> (S1),
     /// then consumes 1 仕込み and serves a dummy customer with tip from rhythm judgement.
+    /// Solo: F / Enter. Local 2P: Enter only (F reserved for Back Beat-B4).
     /// </summary>
     public sealed class InstantCookInput : MonoBehaviour
     {
@@ -16,6 +17,7 @@ namespace BackbeatDiner.Front
         [SerializeField] private ServeRhythmWindow serveRhythm;
         [SerializeField] private Text feedbackLabel;
         [SerializeField] private bool inputEnabled = true;
+        [SerializeField] private bool localTwoPlayerSplit;
 
         private float _flashUntil;
 
@@ -25,16 +27,24 @@ namespace BackbeatDiner.Front
             set => inputEnabled = value;
         }
 
+        public bool LocalTwoPlayerSplit
+        {
+            get => localTwoPlayerSplit;
+            set => localTwoPlayerSplit = value;
+        }
+
         public void Configure(
             DaySessionState daySession,
             DummyCustomerQueue customerQueue,
             Text feedback,
-            ServeRhythmWindow rhythmWindow = null)
+            ServeRhythmWindow rhythmWindow = null,
+            bool twoPlayerSplit = false)
         {
             session = daySession;
             queue = customerQueue;
             feedbackLabel = feedback;
             serveRhythm = rhythmWindow;
+            localTwoPlayerSplit = twoPlayerSplit;
         }
 
         private void Update()
@@ -56,13 +66,26 @@ namespace BackbeatDiner.Front
 
             if (feedbackLabel != null && Time.time > _flashUntil && session != null && !session.IsEnded)
             {
-                feedbackLabel.text = "F / Enter = インスタントクック → 配膳リズム";
+                feedbackLabel.text = localTwoPlayerSplit
+                    ? LocalTwoPlayerBindings.HudFrontCookHint
+                    : "F / Enter = インスタントクック → 配膳リズム";
                 feedbackLabel.color = FrontHudController.Gold;
             }
         }
 
-        private static bool WasCookPressed()
+        private bool WasCookPressed()
         {
+            if (localTwoPlayerSplit)
+            {
+                if (LocalTwoPlayerBindings.WasFrontCookPressed())
+                {
+                    return true;
+                }
+
+                var padSplit = Gamepad.current;
+                return padSplit != null && padSplit.buttonWest.wasPressedThisFrame;
+            }
+
             var kb = Keyboard.current;
             if (kb != null && (kb.fKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
             {
@@ -114,7 +137,7 @@ namespace BackbeatDiner.Front
                     return;
                 }
 
-                Flash("配膳リズム！ Space / J·K", true);
+                Flash(localTwoPlayerSplit ? "配膳リズム！ J·K" : "配膳リズム！ Space / J·K", true);
                 return;
             }
 

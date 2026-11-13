@@ -46,7 +46,8 @@ namespace BackbeatDiner.Core
             var inventory = systems.AddComponent<InventoryBar>();
             var cook = systems.AddComponent<InstantCookInput>();
             var serveRhythm = systems.AddComponent<ServeRhythmWindow>();
-            var beatLexicon = systems.AddComponent<BeatLexiconDemo>();
+            var backBeats = systems.AddComponent<BeatLexiconDemo>();
+            var frontBeats = systems.AddComponent<BeatLexiconDemo>();
 
             if (metronomeClick == null)
             {
@@ -80,17 +81,19 @@ namespace BackbeatDiner.Core
                 out var invRow, out var resultRoot, out var resultTitle, out var resultBody);
 
             inventory.BuildUi(invRow);
-            hitInput.Configure(clock, highway, judgement, combo, bpmLabel);
+            // Local 2P: Back WASD+Space hits stay live during Front serve (J·K).
+            hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true);
             hitInput.Window = JudgeWindow.Default;
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody);
-            serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback);
-            cook.Configure(session, queue, cookFeedback, serveRhythm);
-            // 表役: Beat-F1..F4、8s/同一20s CD、配膳中 FrontCommsSendLocked
-            beatLexicon.Configure(BeatRole.Front, createPadUi: true);
+            serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true);
+            cook.Configure(session, queue, cookFeedback, serveRhythm, twoPlayerSplit: true);
+            // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
+            backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
+            frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — Space=裏ヒット, F/Enter=インスタントクック→配膳リズム(Space/J/K), 1–4=Beat-F1..F4(8s/同一20s・配膳中ロック), ~32拍 or 30s で結果.");
+            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — local 2P: Back WASD+Space hit / A·S·D·F=B1..B4; Front Enter cook / J·K serve / arrows=F1..F4; ~32拍 or 30s.");
         }
 
         private void ResolveMaterials()
@@ -282,19 +285,29 @@ namespace BackbeatDiner.Core
             judgement = EnsureLabel(canvasGo.transform, "JudgementLabel", "判定: —", new Vector2(24f, -56f), TextAnchor.UpperLeft, 26, Gold);
             combo = EnsureLabel(canvasGo.transform, "ComboLabel", "コンボ: 0", new Vector2(24f, -96f), TextAnchor.UpperLeft, 22, Gold);
             bpmLabel = EnsureLabel(canvasGo.transform, "BpmLabel", "BPM: 120", new Vector2(24f, -132f), TextAnchor.UpperLeft, 20, Teal);
+            SetLabelText(EnsureLabel(canvasGo.transform, "BackControlsHint", LocalTwoPlayerBindings.HudBackHint,
+                new Vector2(24f, -168f), TextAnchor.UpperLeft, 15, Teal), LocalTwoPlayerBindings.HudBackHint);
 
             prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-24f, -56f), TextAnchor.UpperRight, 28, Gold);
             serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-24f, -100f), TextAnchor.UpperRight, 28, Teal);
             timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -18f), TextAnchor.UpperCenter, 22, Gold);
-            cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", "F / Enter = インスタントクック → 配膳リズム", new Vector2(-24f, -150f), TextAnchor.UpperRight, 18, Gold);
+            cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
+                new Vector2(-24f, -150f), TextAnchor.UpperRight, 18, Gold);
+            SetLabelText(cookFeedback, LocalTwoPlayerBindings.HudFrontCookHint);
 
-            EnsureLabel(canvasGo.transform, "ServeRhythmHint",
-                "配膳リズム: Space / J·K（Perfect×1.5 / Good×1 / Miss=チップなし）",
-                new Vector2(-24f, -186f), TextAnchor.UpperRight, 16, Teal);
+            SetLabelText(EnsureLabel(canvasGo.transform, "ServeRhythmHint",
+                LocalTwoPlayerBindings.HudFrontServeHint,
+                new Vector2(-24f, -186f), TextAnchor.UpperRight, 16, Teal), LocalTwoPlayerBindings.HudFrontServeHint);
 
-            EnsureLabel(canvasGo.transform, "HelpLabel",
-                "左: Space / A = ヒット　　右: F / Enter → 配膳　　1–4=Beat-F（ビジー/大口/在庫赤/ラスト客・8s CD）　　約32拍 or 30秒で終了",
-                new Vector2(0f, 28f), TextAnchor.LowerCenter, 16, Gold);
+            SetLabelText(EnsureLabel(canvasGo.transform, "FrontBeatHint",
+                LocalTwoPlayerBindings.HudFrontBeatHint,
+                new Vector2(-24f, -218f), TextAnchor.UpperRight, 15, Gold), LocalTwoPlayerBindings.HudFrontBeatHint);
+
+            var help = EnsureLabel(canvasGo.transform, "HelpLabel",
+                LocalTwoPlayerBindings.HudHelp,
+                new Vector2(0f, 28f), TextAnchor.LowerCenter, 15, Gold);
+            SetLabelText(help, LocalTwoPlayerBindings.HudHelp);
+            help.rectTransform.sizeDelta = new Vector2(1800f, 48f);
 
             var rowGo = canvasGo.transform.Find("InventoryRow");
             if (rowGo == null)
@@ -305,7 +318,7 @@ namespace BackbeatDiner.Core
                 invRow.anchorMin = new Vector2(0.75f, 1f);
                 invRow.anchorMax = new Vector2(0.75f, 1f);
                 invRow.pivot = new Vector2(0.5f, 1f);
-                invRow.anchoredPosition = new Vector2(0f, -210f);
+                invRow.anchoredPosition = new Vector2(0f, -252f);
                 invRow.sizeDelta = new Vector2(560f, 72f);
             }
             else
@@ -366,6 +379,14 @@ namespace BackbeatDiner.Core
             return go;
         }
 
+        private static void SetLabelText(Text label, string text)
+        {
+            if (label != null)
+            {
+                label.text = text;
+            }
+        }
+
         private static Text EnsureLabel(Transform parent, string name, string text, Vector2 anchoredPos, TextAnchor corner, int fontSize, Color color)
         {
             var existing = parent.Find(name);
@@ -374,6 +395,7 @@ namespace BackbeatDiner.Core
                 var t = existing.GetComponent<Text>();
                 if (t != null)
                 {
+                    t.text = text;
                     return t;
                 }
             }

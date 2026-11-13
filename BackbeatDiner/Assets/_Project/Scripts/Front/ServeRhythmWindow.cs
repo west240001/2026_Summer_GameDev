@@ -12,6 +12,7 @@ namespace BackbeatDiner.Front
     /// judge window timed to <see cref="AudioSettings.dspTime"/> / <see cref="RhythmClock"/>.
     /// Perfect / Good / Miss scales tip (base sales always kept). While open, front
     /// comms send is locked via <see cref="FrontCommsSendLocked"/> (KG-3).
+    /// Local 2P: J·K only (Space stays on Back hits); Back lane stays enabled.
     /// </summary>
     public sealed class ServeRhythmWindow : MonoBehaviour
     {
@@ -28,6 +29,7 @@ namespace BackbeatDiner.Front
         [SerializeField] private float perfectTipMult = 1.5f;
         [SerializeField] private float goodTipMult = 1.0f;
         [SerializeField] private float missTipMult = 0f;
+        [SerializeField] private bool localTwoPlayerSplit;
 
         private bool _open;
         private float _patienceRatio;
@@ -40,6 +42,12 @@ namespace BackbeatDiner.Front
 
         public bool IsOpen => _open;
 
+        public bool LocalTwoPlayerSplit
+        {
+            get => localTwoPlayerSplit;
+            set => localTwoPlayerSplit = value;
+        }
+
         public event Action<HitJudgement, float> OnServeResolved;
 
         public void Configure(
@@ -47,7 +55,8 @@ namespace BackbeatDiner.Front
             DaySessionState daySession,
             HitInput backHit,
             InstantCookInput cook,
-            Text label)
+            Text label,
+            bool twoPlayerSplit = false)
         {
             if (session != null)
             {
@@ -59,6 +68,7 @@ namespace BackbeatDiner.Front
             hitInput = backHit;
             cookInput = cook;
             hudLabel = label;
+            localTwoPlayerSplit = twoPlayerSplit;
 
             if (session != null)
             {
@@ -105,11 +115,12 @@ namespace BackbeatDiner.Front
             _best = HitJudgement.Miss;
             _bestAbsDelta = double.MaxValue;
             _open = true;
-            // Skip the Instant Cook press frame (F / West) so it does not count as S1.
+            // Skip the Instant Cook press frame (Enter / West) so it does not count as S1.
             _inputArmedDsp = _openedDsp + 0.08;
             FrontCommsSendLocked = true;
 
-            if (hitInput != null)
+            // Solo shells mute Back Space (shared with S1). Local 2P keeps Back hits live.
+            if (!localTwoPlayerSplit && hitInput != null)
             {
                 hitInput.InputEnabled = false;
             }
@@ -119,7 +130,8 @@ namespace BackbeatDiner.Front
                 cookInput.InputEnabled = false;
             }
 
-            SetHud($"配膳リズム — Space / J·K で拍合わせ（{barCount}小節）", FrontHudController.Gold);
+            var serveKeys = localTwoPlayerSplit ? "J·K" : "Space / J·K";
+            SetHud($"配膳リズム — {serveKeys} で拍合わせ（{barCount}小節）", FrontHudController.Gold);
             Debug.Log($"[ServeRhythmWindow] Open bars={barCount} deadlineDsp={_deadlineDsp:F3} patience={_patienceRatio:0.00}");
             return true;
         }
@@ -146,8 +158,20 @@ namespace BackbeatDiner.Front
             RefreshProgressHud(now);
         }
 
-        private static bool WasServeHitPressed()
+        private bool WasServeHitPressed()
         {
+            if (localTwoPlayerSplit)
+            {
+                if (LocalTwoPlayerBindings.WasFrontServeHitPressed())
+                {
+                    return true;
+                }
+
+                var padSplit = Gamepad.current;
+                return padSplit != null &&
+                       (padSplit.buttonEast.wasPressedThisFrame || padSplit.buttonWest.wasPressedThisFrame);
+            }
+
             var kb = Keyboard.current;
             if (kb != null &&
                 (kb.spaceKey.wasPressedThisFrame ||
@@ -219,7 +243,7 @@ namespace BackbeatDiner.Front
                 session.CompleteServeWithRhythm(_patienceRatio, tipMult, judgement);
             }
 
-            if (hitInput != null && session != null && session.IsRunning)
+            if (!localTwoPlayerSplit && hitInput != null && session != null && session.IsRunning)
             {
                 hitInput.InputEnabled = true;
             }
@@ -249,7 +273,8 @@ namespace BackbeatDiner.Front
                 return;
             }
 
-            hudLabel.text = $"配膳リズム — Space / J·K  残り {beatsLeft:0.0}拍";
+            var serveKeys = localTwoPlayerSplit ? "J·K" : "Space / J·K";
+            hudLabel.text = $"配膳リズム — {serveKeys}  残り {beatsLeft:0.0}拍";
             hudLabel.color = FrontHudController.Gold;
         }
 

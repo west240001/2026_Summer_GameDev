@@ -42,4 +42,4 @@
 
 Project Context: `docs/unity-production-plan.md` — パッケージ、フォルダマップ、週次プロト、**ネットワークは縦スライス後**。
 
-縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供、配膳中コミュロック）。
+縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック＋F1+ `ServeRhythmWindow`、共有仕込み/提供、**ローカル2P キー分割** `LocalTwoPlayerBindings`：裏 WASD+Space / A·S·D·F=B*、表 Enter / J·K / 矢印=F*、配膳中は表コミュロック）。

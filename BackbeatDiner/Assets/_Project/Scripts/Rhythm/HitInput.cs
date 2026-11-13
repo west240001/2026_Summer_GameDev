@@ -1,4 +1,5 @@
 using System;
+using BackbeatDiner.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -6,7 +7,8 @@ using UnityEngine.UI;
 namespace BackbeatDiner.Rhythm
 {
     /// <summary>
-    /// Space / gamepad South hit input with judge feedback (Debug.Log + on-screen text).
+    /// Hit input with judge feedback (Debug.Log + on-screen text).
+    /// Solo: Space / gamepad South. Local 2P split: WASD+Space (see <see cref="LocalTwoPlayerBindings"/>).
     /// </summary>
     public sealed class HitInput : MonoBehaviour
     {
@@ -17,6 +19,7 @@ namespace BackbeatDiner.Rhythm
         [SerializeField] private Text comboText;
         [SerializeField] private Text bpmText;
         [SerializeField] private bool inputEnabled = true;
+        [SerializeField] private bool localTwoPlayerSplit;
 
         private int _combo;
         private int _score;
@@ -36,17 +39,30 @@ namespace BackbeatDiner.Rhythm
             set => inputEnabled = value;
         }
 
+        public bool LocalTwoPlayerSplit
+        {
+            get => localTwoPlayerSplit;
+            set => localTwoPlayerSplit = value;
+        }
+
         public int Combo => _combo;
 
         public int Score => _score;
 
-        public void Configure(RhythmClock rhythmClock, NoteHighway noteHighway, Text judgement, Text combo, Text bpm)
+        public void Configure(
+            RhythmClock rhythmClock,
+            NoteHighway noteHighway,
+            Text judgement,
+            Text combo,
+            Text bpm,
+            bool twoPlayerSplit = false)
         {
             clock = rhythmClock;
             highway = noteHighway;
             judgementText = judgement;
             comboText = combo;
             bpmText = bpm;
+            localTwoPlayerSplit = twoPlayerSplit;
         }
 
         private void Update()
@@ -59,8 +75,19 @@ namespace BackbeatDiner.Rhythm
             RefreshHud();
         }
 
-        private static bool WasHitPressed()
+        private bool WasHitPressed()
         {
+            if (localTwoPlayerSplit)
+            {
+                if (LocalTwoPlayerBindings.WasBackHitPressed())
+                {
+                    return true;
+                }
+
+                var padSplit = Gamepad.current;
+                return padSplit != null && padSplit.buttonSouth.wasPressedThisFrame;
+            }
+
             var kb = Keyboard.current;
             if (kb != null && kb.spaceKey.wasPressedThisFrame)
             {

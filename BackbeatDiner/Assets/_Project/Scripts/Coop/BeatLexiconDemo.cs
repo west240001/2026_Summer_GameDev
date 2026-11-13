@@ -1,15 +1,15 @@
 using System;
+using BackbeatDiner.Core;
 using BackbeatDiner.Front;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace BackbeatDiner.Coop
 {
     /// <summary>
-    /// KG-3 C3 beat lexicon sender: pads 1–4 map to Beat-B1..B4 or Beat-F1..F4.
-    /// CD: 8s any / 20s same-motif. Blocked while <see cref="ServeRhythmWindow.FrontCommsSendLocked"/>.
-    /// Builds Japanese pad labels + optional HUD CD bind.
+    /// KG-3 C3 beat lexicon sender: pads map to Beat-B1..B4 or Beat-F1..F4.
+    /// Solo: keys 1–4. Local 2P: Back A/S/D/F, Front ←↓→↑.
+    /// CD: 8s any / 20s same-motif. Front blocked while <see cref="ServeRhythmWindow.FrontCommsSendLocked"/>.
     /// </summary>
     public sealed class BeatLexiconDemo : MonoBehaviour
     {
@@ -20,6 +20,7 @@ namespace BackbeatDiner.Coop
         public static event Action<BeatDefinition> BeatSent;
 
         [SerializeField] private BeatRole role = BeatRole.Front;
+        [SerializeField] private BeatPadKeyScheme keyScheme = BeatPadKeyScheme.Digits;
         [SerializeField] private bool buildPadUi = true;
         [SerializeField] private AudioSource source;
         [SerializeField] private Text cooldownLabel;
@@ -34,16 +35,21 @@ namespace BackbeatDiner.Coop
         private Text _statusLabel;
 
         public BeatRole Role => role;
+        public BeatPadKeyScheme KeyScheme => keyScheme;
         public float RemainingAnyCooldown => Mathf.Max(0f, _nextAnyReadyTime - Time.unscaledTime);
-        public bool IsAnyReady => Time.unscaledTime >= _nextAnyReadyTime && !ServeRhythmWindow.FrontCommsSendLocked;
+        public bool IsFrontSendLocked =>
+            role == BeatRole.Front && ServeRhythmWindow.FrontCommsSendLocked;
+        public bool IsAnyReady => Time.unscaledTime >= _nextAnyReadyTime && !IsFrontSendLocked;
 
         public void Configure(
             BeatRole beatRole,
             Text cdLabel = null,
             Image cdFill = null,
-            bool createPadUi = true)
+            bool createPadUi = true,
+            BeatPadKeyScheme padKeys = BeatPadKeyScheme.Digits)
         {
             role = beatRole;
+            keyScheme = padKeys;
             cooldownLabel = cdLabel;
             cooldownFill = cdFill;
             buildPadUi = createPadUi;
@@ -100,30 +106,22 @@ namespace BackbeatDiner.Coop
 
         private void Update()
         {
-            var kb = Keyboard.current;
-            if (kb != null)
+            var pad = ReadPadIndexThisFrame();
+            if (pad >= 0)
             {
-                if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame)
-                {
-                    TrySend(0);
-                }
-                else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame)
-                {
-                    TrySend(1);
-                }
-                else if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame)
-                {
-                    TrySend(2);
-                }
-                else if (kb.digit4Key.wasPressedThisFrame || kb.numpad4Key.wasPressedThisFrame)
-                {
-                    TrySend(3);
-                }
+                TrySend(pad);
             }
 
             RefreshCooldownHud();
             RefreshPadUi();
         }
+
+        private int ReadPadIndexThisFrame() => keyScheme switch
+        {
+            BeatPadKeyScheme.BackAsdf => LocalTwoPlayerBindings.ReadBackBeatPadIndex(),
+            BeatPadKeyScheme.FrontArrows => LocalTwoPlayerBindings.ReadFrontBeatPadIndex(),
+            _ => LocalTwoPlayerBindings.ReadDigitBeatPadIndex()
+        };
 
         public bool TrySend(int padIndex)
         {
@@ -132,7 +130,7 @@ namespace BackbeatDiner.Coop
                 return false;
             }
 
-            if (ServeRhythmWindow.FrontCommsSendLocked)
+            if (IsFrontSendLocked)
             {
                 Debug.Log("[BeatLexicon] Send blocked — 配膳リズム中 (FrontCommsSendLocked)");
                 SetStatus("送信ロック（配膳中）", FrontHudController.Gold);
@@ -180,7 +178,7 @@ namespace BackbeatDiner.Coop
 
         private void RefreshCooldownHud()
         {
-            var locked = ServeRhythmWindow.FrontCommsSendLocked;
+            var locked = IsFrontSendLocked;
             var remain = RemainingAnyCooldown;
             var fill = locked
                 ? 1f
@@ -211,36 +209,77 @@ namespace BackbeatDiner.Coop
             }
         }
 
+        private string PadHudObjectName =>
+            role == BeatRole.Back ? "BeatLexiconPadHUD_Back" : "BeatLexiconPadHUD_Front";
+
+        private string PadRootName =>
+            role == BeatRole.Back ? "PadRoot_Back" : "PadRoot_Front";
+
+        private static readonly string[] DigitKeyLabels = { "1", "2", "3", "4" };
+        private static readonly string[] AsdfKeyLabels = { "A", "S", "D", "F" };
+        private static readonly string[] ArrowKeyLabels = { "←", "↓", "→", "↑" };
+
+        private string[] KeyLabelsForScheme() => keyScheme switch
+        {
+            BeatPadKeyScheme.BackAsdf => AsdfKeyLabels,
+            BeatPadKeyScheme.FrontArrows => ArrowKeyLabels,
+            _ => DigitKeyLabels
+        };
+
         private void EnsurePadUi()
         {
-            var canvasGo = GameObject.Find("BeatLexiconPadHUD");
+            var canvasName = PadHudObjectName;
+            var canvasGo = GameObject.Find(canvasName);
+            // Migrate legacy single canvas name used by FrontShell / older VerticalSlice.
+            if (canvasGo == null && role == BeatRole.Front && keyScheme == BeatPadKeyScheme.Digits)
+            {
+                canvasGo = GameObject.Find("BeatLexiconPadHUD");
+                if (canvasGo != null)
+                {
+                    canvasGo.name = canvasName;
+                }
+            }
+
             if (canvasGo == null)
             {
-                canvasGo = new GameObject("BeatLexiconPadHUD");
+                canvasGo = new GameObject(canvasName);
                 var canvas = canvasGo.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.sortingOrder = 25;
+                canvas.sortingOrder = role == BeatRole.Back ? 24 : 25;
                 var scaler = canvasGo.AddComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
                 canvasGo.AddComponent<GraphicRaycaster>();
             }
 
-            var root = canvasGo.transform.Find("PadRoot");
+            var rootName = PadRootName;
+            var root = canvasGo.transform.Find(rootName) ?? canvasGo.transform.Find("PadRoot");
             RectTransform rootRt;
             if (root == null)
             {
-                var go = new GameObject("PadRoot");
+                var go = new GameObject(rootName);
                 go.transform.SetParent(canvasGo.transform, false);
                 rootRt = go.AddComponent<RectTransform>();
-                rootRt.anchorMin = new Vector2(1f, 0f);
-                rootRt.anchorMax = new Vector2(1f, 0f);
-                rootRt.pivot = new Vector2(1f, 0f);
-                rootRt.anchoredPosition = new Vector2(-24f, 72f);
+                if (role == BeatRole.Back)
+                {
+                    rootRt.anchorMin = new Vector2(0f, 0f);
+                    rootRt.anchorMax = new Vector2(0f, 0f);
+                    rootRt.pivot = new Vector2(0f, 0f);
+                    rootRt.anchoredPosition = new Vector2(24f, 72f);
+                }
+                else
+                {
+                    rootRt.anchorMin = new Vector2(1f, 0f);
+                    rootRt.anchorMax = new Vector2(1f, 0f);
+                    rootRt.pivot = new Vector2(1f, 0f);
+                    rootRt.anchoredPosition = new Vector2(-24f, 72f);
+                }
+
                 rootRt.sizeDelta = new Vector2(420f, 120f);
             }
             else
             {
+                root.name = rootName;
                 rootRt = root.GetComponent<RectTransform>();
             }
 
@@ -295,26 +334,40 @@ namespace BackbeatDiner.Coop
                 _padLabels[i] = label;
             }
 
-            var status = canvasGo.transform.Find("PadStatus");
+            var statusName = role == BeatRole.Back ? "PadStatus_Back" : "PadStatus_Front";
+            var status = canvasGo.transform.Find(statusName) ?? canvasGo.transform.Find("PadStatus");
             if (status == null)
             {
-                var go = new GameObject("PadStatus");
+                var go = new GameObject(statusName);
                 go.transform.SetParent(canvasGo.transform, false);
                 _statusLabel = go.AddComponent<Text>();
                 _statusLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                                     ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
                 _statusLabel.fontSize = 16;
-                _statusLabel.alignment = TextAnchor.MiddleRight;
                 _statusLabel.color = FrontHudController.Teal;
                 var rt = _statusLabel.rectTransform;
-                rt.anchorMin = new Vector2(1f, 0f);
-                rt.anchorMax = new Vector2(1f, 0f);
-                rt.pivot = new Vector2(1f, 0f);
-                rt.anchoredPosition = new Vector2(-24f, 48f);
+                if (role == BeatRole.Back)
+                {
+                    _statusLabel.alignment = TextAnchor.MiddleLeft;
+                    rt.anchorMin = new Vector2(0f, 0f);
+                    rt.anchorMax = new Vector2(0f, 0f);
+                    rt.pivot = new Vector2(0f, 0f);
+                    rt.anchoredPosition = new Vector2(24f, 48f);
+                }
+                else
+                {
+                    _statusLabel.alignment = TextAnchor.MiddleRight;
+                    rt.anchorMin = new Vector2(1f, 0f);
+                    rt.anchorMax = new Vector2(1f, 0f);
+                    rt.pivot = new Vector2(1f, 0f);
+                    rt.anchoredPosition = new Vector2(-24f, 48f);
+                }
+
                 rt.sizeDelta = new Vector2(420f, 24f);
             }
             else
             {
+                status.name = statusName;
                 _statusLabel = status.GetComponent<Text>();
             }
 
@@ -328,8 +381,9 @@ namespace BackbeatDiner.Coop
                 return;
             }
 
-            var locked = ServeRhythmWindow.FrontCommsSendLocked;
+            var locked = IsFrontSendLocked;
             var anyReady = Time.unscaledTime >= _nextAnyReadyTime;
+            var keyLabels = KeyLabelsForScheme();
             for (var i = 0; i < 4; i++)
             {
                 var def = _pads[i];
@@ -337,7 +391,7 @@ namespace BackbeatDiner.Coop
                 var ready = !locked && anyReady && motifCd <= 0f;
                 if (_padLabels[i] != null)
                 {
-                    var key = i + 1;
+                    var key = keyLabels[i];
                     var cdNote = locked
                         ? "ロック"
                         : motifCd > 0f

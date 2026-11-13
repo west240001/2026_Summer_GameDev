@@ -8,8 +8,8 @@
 | `FrontHudController` | 日本語 HUD：客待ち / 在庫 / クォータ / **Beat CD**（`BeatLexiconDemo` 連動可） |
 | `DummyCustomerQueue` | ローポリ客 1〜3＋タイムアウトバー（`TryServeOldest` 対応） |
 | `InventoryBar` | 偽在庫カテゴリ（teal / gold） |
-| `InstantCookInput` | v0 一ボタン Instant Cook（F / Enter / West）→ `ServeRhythmWindow` |
-| `ServeRhythmWindow` | **F1+ / S1**：1〜2小節の dsp 拍判定（Space / J·K）。Perfect/Good/Miss でチップ倍率。開いている間 `FrontCommsSendLocked` |
+| `InstantCookInput` | Instant Cook → `ServeRhythmWindow`。solo: F/Enter；縦スライス2P: **Enter** のみ |
+| `ServeRhythmWindow` | **F1+ / S1**：dsp 拍判定。solo: Space/J·K；縦スライス2P: **J·K**（裏ヒット継続）。開いている間 `FrontCommsSendLocked`（表ビートのみ） |
 
 シーン: `Assets/_Project/Scenes/FrontShellPrototype.unity` / 縦スライスは `VerticalSlicePrototype.unity`  
 メニュー: **BACKBEAT DINER → Build Front Shell Prototype Scene** / **Build Vertical Slice Prototype Scene**
