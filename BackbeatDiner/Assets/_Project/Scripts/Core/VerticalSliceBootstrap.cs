@@ -1,3 +1,4 @@
+using BackbeatDiner.Back;
 using BackbeatDiner.Coop;
 using BackbeatDiner.Front;
 using BackbeatDiner.Rhythm;
@@ -46,7 +47,6 @@ namespace BackbeatDiner.Core
             var backCam = EnsureBackCamera();
             var frontCam = EnsureFrontCamera();
             _ = backCam;
-            _ = frontCam;
 
             var systems = new GameObject("VerticalSliceSystems");
             var clock = systems.AddComponent<RhythmClock>();
@@ -66,6 +66,7 @@ namespace BackbeatDiner.Core
             var snapshotReceive = systems.AddComponent<SnapshotReceivePanel>();
             var questRequest = systems.AddComponent<QuestRequestController>();
             var questReceive = systems.AddComponent<QuestReceiveToast>();
+            var surveillance = systems.AddComponent<SurveillanceThumbnail>();
 
             if (metronomeClick == null)
             {
@@ -147,6 +148,8 @@ namespace BackbeatDiner.Core
             // C1: Back Q → Quest SE + Front toast/icon (CD 15s; blocked while notes active)
             questReceive.Configure();
             questRequest.Configure(highway);
+            // KG-4: Back surveillance RawImage of FrontCamera (~2Hz); BLIND while HasActiveNotes
+            surveillance.Configure(highway, frontCam);
 
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
