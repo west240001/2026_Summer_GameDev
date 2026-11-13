@@ -19,7 +19,8 @@
 2. **Projects → Add →** リポジトリ内の **`BackbeatDiner`** フォルダを選択します（リポジトリルートではありません）。
 3. 初回起動で **URP / Input System** のパッケージ解決と、必要に応じた **プロジェクト設定のアップグレード** が走ります。差分はレビューしてコミットしてください。
 4. **Week 1 リズム試作**: `Assets/_Project/Scenes/RhythmPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Rhythm Prototype Scene**、または batchmode で `RhythmPrototypeSceneBuilder.BuildFromCommandLine`）。
-5. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
+5. **Week 2 表 HUD 殻**: `Assets/_Project/Scenes/FrontShellPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Front Shell Prototype Scene**、または batchmode で `FrontShellPrototypeSceneBuilder.BuildFromCommandLine`）。
+6. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
 
 ## Week 1 — Rhythm tick プロト（操作）
 
@@ -30,6 +31,17 @@
 | メトロノーム | `Assets/_Project/Audio/MetronomeClick.wav`（手続き PCM・ライセンスは同フォルダ `AUDIO_LICENSE.md`） |
 
 シーンが未生成のとき: Unity メニュー **BACKBEAT DINER → Build Rhythm Prototype Scene** で `RhythmPrototype.unity` を作成し Build Settings 先頭に登録します。エディタがプロジェクトをロックしている場合は **Assets → Refresh** 後に再 Play してください。
+
+## Week 2 — Front HUD shell プロト（操作）
+
+| 操作 | 内容 |
+|------|------|
+| （表示のみ） | ローポリ客 1〜3 人＋タイムアウトバー、日本語 HUD（**客待ち / 在庫 / クォータ / CD**） |
+| **1 / 2 / 3 / 4** | ビート送信 SE → 表側 **エッジパルス**＋波形ストリップ（a11y） |
+| **B** | 裏ビート受信のシミュレート（自動パルスもあり） |
+| 初回のみ | 日本語チュートリアルトースト「裏からのビートを受信しました」 |
+
+ブランド色マテリアル: `Assets/_Project/Art/Materials/BrandGold.mat`（`#C9A227`）/ `BrandTeal.mat`（`#1A6B6B`）。再生成は **BACKBEAT DINER → Build Front Shell Prototype Scene**。
 
 ## フォルダ構成（`Assets/_Project/`）
 
@@ -47,8 +59,8 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 ## 次のプロト手順（ローカル2P first）
 
 1. **Week 1 — リズム tick**（着手済み）: `RhythmClock` + メトロノーム WAV + `HitInput` / `NoteHighway` / `BeatLexiconDemo`。シーン `RhythmPrototype`。
-2. **Week 2 — 非対称 HUD 殻**：裏＝レーンUIダミー、表＝客1人表示（操作なし）。
-3. **ビート送信プロト**：C3 モチーフ1種の SE + 相手側パルス（KG-3）— キー1–4 の SE は仮置き済み。
+2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse`。裏レーンは Week1 `RhythmPrototype` を併用。
+3. **ビート送信プロト**：C3 モチーフ1種の SE + 相手側パルス（KG-3）— キー1–4 の SE と受信パルスは仮置き済み。
 4. **1日縦切り**：4チャートなしで「1曲＋表ミニMG」まで。
 5. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
 

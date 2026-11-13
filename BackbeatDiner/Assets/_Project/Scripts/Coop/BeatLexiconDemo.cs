@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,6 +9,9 @@ namespace BackbeatDiner.Coop
     /// </summary>
     public sealed class BeatLexiconDemo : MonoBehaviour
     {
+        /// <summary>Raised when a motif is sent (index 0–3, Japanese label).</summary>
+        public static event Action<int, string> MotifSent;
+
         [SerializeField] private AudioSource source;
 
         private AudioClip[] _motifs;
@@ -69,6 +73,7 @@ namespace BackbeatDiner.Coop
 
             source.PlayOneShot(_motifs[index], 0.85f);
             Debug.Log($"[BeatLexiconDemo] Send motif {index + 1}: {label}");
+            MotifSent?.Invoke(index, label);
         }
 
         private static AudioClip BuildMotif(string name, float[] freqs, float noteSeconds)
