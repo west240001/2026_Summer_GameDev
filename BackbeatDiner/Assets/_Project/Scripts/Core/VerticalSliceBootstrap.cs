@@ -64,6 +64,8 @@ namespace BackbeatDiner.Core
             var gapCoop = systems.AddComponent<ChartGapCoopWindow>();
             var snapshotSend = systems.AddComponent<SnapshotSendController>();
             var snapshotReceive = systems.AddComponent<SnapshotReceivePanel>();
+            var questRequest = systems.AddComponent<QuestRequestController>();
+            var questReceive = systems.AddComponent<QuestReceiveToast>();
 
             if (metronomeClick == null)
             {
@@ -138,10 +140,13 @@ namespace BackbeatDiner.Core
             frontBeats.Configure(BeatRole.Front, createPadUi: true, padKeys: BeatPadKeyScheme.FrontArrows);
             // Gap coop: スナップ推奨 / Beat-B3 hint + brief CD unlock + pulse
             receivePulse.Configure(autoSimulate: false, tutorialToast: false);
-            gapCoop.Configure(backBeats, frontBeats, receivePulse, snapshotSend);
+            gapCoop.Configure(backBeats, frontBeats, receivePulse, snapshotSend, questRequest);
             // C2: Tab hold 0.8s → send 1.2s → Back Snap-In panel + SE (CD 25s; gap preferred)
             snapshotReceive.Configure();
             snapshotSend.Configure(inventory, queue, gapCoop);
+            // C1: Back Q → Quest SE + Front toast/icon (CD 15s; blocked while notes active)
+            questReceive.Configure();
+            questRequest.Configure(highway);
 
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)

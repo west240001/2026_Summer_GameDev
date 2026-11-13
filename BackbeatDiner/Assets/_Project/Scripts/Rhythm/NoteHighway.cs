@@ -88,6 +88,24 @@ namespace BackbeatDiner.Rhythm
             }
         }
 
+        /// <summary>True while unconsumed notes are on the highway (C1 blind / note-input lock).</summary>
+        public bool HasActiveNotes
+        {
+            get
+            {
+                for (var i = 0; i < _notes.Count; i++)
+                {
+                    var n = _notes[i];
+                    if (!n.Consumed && n.Go != null)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         /// <summary>Destroy active note visuals and reset chart spawn cursor.</summary>
         public void ClearActiveNotes()
         {

@@ -8,6 +8,8 @@
 | `ChartGapCoopWindow` | チャート間隙の協力ウィンドウ：日本語 **スナップ推奨** + **Beat-B3「スナップ前」** ヒント、CD 解除ブースト、バナー／パッド pulse。`DaySetlistRunner` → VerticalSlice |
 | `SnapshotSendController` | **C2** 表→裏：Tab 長押し **0.8s** → 送信アニメ **1.2s** → CD **25s**。日本語 HUD。間隙で推奨＋CD解除 |
 | `SnapshotReceivePanel` | **C2** 裏受信：在庫／客パネル（約5s）＋ **Snap-In** ビート SE |
+| `QuestRequestController` | **C1** 裏→表：**Q** → Quest 要求。CD **15s**。`NoteHighway.HasActiveNotes` 中は送信不可 |
+| `QuestReceiveToast` | **C1** 表受信：Quest SE＋日本語トースト＋アイコン。応答は **C2 Tab** または **Beat-F1 ビジー** |
 
 ## Pad labels（v1）
 

@@ -17,7 +17,7 @@ namespace BackbeatDiner.Coop
 
         private const string PromptTitle = "協力ウィンドウ";
         private const string PromptSnap = "スナップ推奨 — 表は Tab 長押し0.8sで C2 送信";
-        private const string PromptB3 = "裏: Beat-B3「スナップ前」を送れ（D キー）";
+        private const string PromptB3 = "裏: Beat-B3「スナップ前」／Qで C1 クエスト";
 
         [SerializeField] private float pulseHz = 2.2f;
         [SerializeField] private float boostHoldSeconds = 2.5f;
@@ -26,6 +26,7 @@ namespace BackbeatDiner.Coop
         private BeatLexiconDemo _frontBeats;
         private BeatReceivePulse _receivePulse;
         private SnapshotSendController _snapshotSend;
+        private QuestRequestController _questRequest;
 
         private GameObject _root;
         private CanvasGroup _group;
@@ -45,12 +46,14 @@ namespace BackbeatDiner.Coop
             BeatLexiconDemo backBeats,
             BeatLexiconDemo frontBeats,
             BeatReceivePulse receivePulse = null,
-            SnapshotSendController snapshotSend = null)
+            SnapshotSendController snapshotSend = null,
+            QuestRequestController questRequest = null)
         {
             _backBeats = backBeats;
             _frontBeats = frontBeats;
             _receivePulse = receivePulse;
             _snapshotSend = snapshotSend;
+            _questRequest = questRequest;
             EnsureUi();
             SetVisible(false);
         }
@@ -80,12 +83,13 @@ namespace BackbeatDiner.Coop
             UnlockAndBoost();
             _snapshotSend?.SetGapPreferred(true);
             _snapshotSend?.UnlockCooldown();
+            _questRequest?.UnlockCooldown();
             _receivePulse?.TriggerPulse(2, "スナップ前");
             _backBeats?.PulsePad(2, boostHoldSeconds);
             SetVisible(true);
 
             Debug.Log(
-                $"[ChartGapCoopWindow] Gap coop open {gapSeconds:0.#}s — スナップ推奨 / Beat-B3 hint; CD unlock");
+                $"[ChartGapCoopWindow] Gap coop open {gapSeconds:0.#}s — スナップ推奨 / Beat-B3 / C1 Q; CD unlock");
         }
 
         /// <summary>Hide prompts when the next chart starts.</summary>
@@ -108,6 +112,7 @@ namespace BackbeatDiner.Coop
             _backBeats?.UnlockCooldowns();
             _frontBeats?.UnlockCooldowns();
             _snapshotSend?.UnlockCooldown();
+            _questRequest?.UnlockCooldown();
             _boostUntil = Time.unscaledTime + boostHoldSeconds;
 
             if (_cdLine != null)
