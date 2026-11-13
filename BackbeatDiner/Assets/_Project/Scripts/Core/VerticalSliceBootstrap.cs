@@ -18,6 +18,11 @@ namespace BackbeatDiner.Core
         private static readonly Color Cream = new Color(0.92f, 0.88f, 0.78f, 1f);
         private static readonly Color WarmWood = new Color(0.35f, 0.22f, 0.12f, 1f);
         private static readonly Color SoftWhite = new Color(0.95f, 0.93f, 0.88f, 1f);
+        private static readonly Color Stainless = new Color(0.72f, 0.76f, 0.8f, 1f);
+        private static readonly Color StainlessDark = new Color(0.42f, 0.46f, 0.5f, 1f);
+        private static readonly Color CastIron = new Color(0.12f, 0.12f, 0.14f, 1f);
+        private static readonly Color TileGrout = new Color(0.78f, 0.82f, 0.84f, 1f);
+        private static readonly Color WarmAmber = new Color(1f, 0.72f, 0.35f, 1f);
 
         [SerializeField] private AudioClip metronomeClick;
         [SerializeField] private float bpm = 120f;
@@ -101,7 +106,7 @@ namespace BackbeatDiner.Core
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — polished diner 3D + HUD; local 2P.");
+            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — kitchen BACK + diner FRONT; local 2P.");
         }
 
         private void ResolveMaterials()
@@ -129,31 +134,31 @@ namespace BackbeatDiner.Core
                 return;
             }
 
-            BuildBackRhythmStation();
+            BuildBackKitchen();
             BuildFrontDinerRoom();
             CreateLaneAnchors(out _, out _);
         }
 
-        private void BuildBackRhythmStation()
+        private void BuildBackKitchen()
         {
             var back = new GameObject("BackKitchenRoot");
             back.transform.position = new Vector3(-6f, 0f, 0f);
 
-            // Checker floor tiles
-            BuildFloorTiles(back.transform, 8, 6, 0.95f, Teal * 0.45f, Navy * 1.1f);
+            // Kitchen floor tiles (teal / stainless checker)
+            BuildFloorTiles(back.transform, 8, 6, 0.95f, Teal * 0.4f, StainlessDark * 0.85f);
 
             CreatePrim(PrimitiveType.Cube, "BackWall", back.transform, new Vector3(0f, 1.6f, 2.8f), new Vector3(8f, 3.2f, 0.18f), Navy);
             CreatePrim(PrimitiveType.Cube, "SideWallL", back.transform, new Vector3(-3.9f, 1.6f, 0.4f), new Vector3(0.18f, 3.2f, 5.2f), Navy * 1.05f);
             CreatePrim(PrimitiveType.Cube, "SideWallR", back.transform, new Vector3(3.9f, 1.6f, 0.4f), new Vector3(0.18f, 3.2f, 5.2f), Navy * 1.05f);
 
-            // Main prep counter + pass shelf
-            CreatePrim(PrimitiveType.Cube, "KitchenCounter", back.transform, new Vector3(0f, 0.45f, 0.35f), new Vector3(3.6f, 0.9f, 1.2f), Teal);
-            CreatePrim(PrimitiveType.Cube, "CounterTop", back.transform, new Vector3(0f, 0.92f, 0.35f), new Vector3(3.7f, 0.08f, 1.28f), SoftWhite);
-            CreatePrim(PrimitiveType.Cube, "PassShelf", back.transform, new Vector3(0f, 1.55f, 0.85f), new Vector3(2.4f, 0.08f, 0.55f), WarmWood);
-            CreatePrim(PrimitiveType.Cube, "PassWall", back.transform, new Vector3(0f, 1.35f, 1.15f), new Vector3(2.8f, 1.4f, 0.12f), Teal * 1.15f);
-            CreatePrim(PrimitiveType.Cube, "PassWindow", back.transform, new Vector3(0f, 1.45f, 1.08f), new Vector3(1.5f, 0.7f, 0.08f), Gold);
+            BuildKitchenBacksplash(back.transform);
+            BuildStainlessPrepLine(back.transform);
+            BuildStoveOven(back.transform);
+            BuildPotShelf(back.transform);
+            BuildPassWindowStation(back.transform);
+            BuildKitchenWarmerLights(back.transform);
 
-            // Rhythm pads row (A S D F visual)
+            // Rhythm pads row (A S D F visual) on prep counter
             var padColors = new[] { Gold, Teal, Gold * 0.85f, Teal * 1.2f };
             var padLabels = new[] { "A", "S", "D", "F" };
             for (var i = 0; i < 4; i++)
@@ -177,6 +182,154 @@ namespace BackbeatDiner.Core
 
             CreatePendantLamp(back.transform, new Vector3(-1.6f, 2.55f, 0.2f), "BackLampL");
             CreatePendantLamp(back.transform, new Vector3(1.6f, 2.55f, 0.2f), "BackLampR");
+        }
+
+        private void BuildKitchenBacksplash(Transform parent)
+        {
+            var root = new GameObject("BacksplashTiles");
+            root.transform.SetParent(parent, false);
+            const int cols = 10;
+            const int rows = 3;
+            const float size = 0.55f;
+            var originX = -(cols - 1) * size * 0.5f;
+            var originY = 1.05f;
+            for (var y = 0; y < rows; y++)
+            {
+                for (var x = 0; x < cols; x++)
+                {
+                    var color = ((x + y) & 1) == 0 ? SoftWhite : TileGrout;
+                    CreatePrim(PrimitiveType.Cube, $"Splash_{x}_{y}", root.transform,
+                        new Vector3(originX + x * size, originY + y * size, 2.68f),
+                        new Vector3(size * 0.92f, size * 0.92f, 0.04f),
+                        color);
+                }
+            }
+
+            // Gold / teal accent strip under splash
+            CreatePrim(PrimitiveType.Cube, "SplashAccentGold", parent, new Vector3(0f, 0.88f, 2.66f), new Vector3(5.6f, 0.06f, 0.05f), Gold);
+            CreatePrim(PrimitiveType.Cube, "SplashAccentTeal", parent, new Vector3(0f, 0.8f, 2.66f), new Vector3(5.6f, 0.05f, 0.05f), Teal);
+        }
+
+        private void BuildStainlessPrepLine(Transform parent)
+        {
+            // Main stainless prep counter (replaces flat teal block)
+            CreatePrim(PrimitiveType.Cube, "KitchenCounter", parent, new Vector3(0f, 0.45f, 0.35f), new Vector3(3.6f, 0.9f, 1.2f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "CounterTop", parent, new Vector3(0f, 0.92f, 0.35f), new Vector3(3.75f, 0.07f, 1.3f), Stainless);
+            CreatePrim(PrimitiveType.Cube, "CounterToeKick", parent, new Vector3(0f, 0.06f, 0.35f), new Vector3(3.55f, 0.12f, 1.15f), CastIron);
+            CreatePrim(PrimitiveType.Cube, "CounterTealTrim", parent, new Vector3(0f, 0.72f, -0.24f), new Vector3(3.62f, 0.08f, 0.04f), Teal);
+            CreatePrim(PrimitiveType.Cube, "CounterGoldHandle", parent, new Vector3(-1.1f, 0.55f, -0.26f), new Vector3(0.55f, 0.04f, 0.05f), Gold);
+            CreatePrim(PrimitiveType.Cube, "CounterGoldHandleR", parent, new Vector3(1.1f, 0.55f, -0.26f), new Vector3(0.55f, 0.04f, 0.05f), Gold);
+
+            // Cutting / prep board on left of pads
+            CreatePrim(PrimitiveType.Cube, "PrepBoard", parent, new Vector3(-2.05f, 0.98f, 0.15f), new Vector3(0.85f, 0.05f, 0.7f), WarmWood);
+            CreatePrim(PrimitiveType.Cube, "PrepBoardGroove", parent, new Vector3(-2.05f, 1.01f, 0.15f), new Vector3(0.7f, 0.01f, 0.04f), WarmWood * 0.7f);
+            CreatePrim(PrimitiveType.Cube, "ChefKnife", parent, new Vector3(-1.75f, 1.02f, 0.35f), new Vector3(0.35f, 0.02f, 0.06f), Stainless);
+            CreatePrim(PrimitiveType.Cube, "KnifeHandle", parent, new Vector3(-1.55f, 1.02f, 0.35f), new Vector3(0.12f, 0.03f, 0.05f), CastIron);
+
+            // Side stainless wing (dish landing)
+            CreatePrim(PrimitiveType.Cube, "SideCounter", parent, new Vector3(2.55f, 0.4f, 0.9f), new Vector3(1.1f, 0.8f, 1.6f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "SideCounterTop", parent, new Vector3(2.55f, 0.82f, 0.9f), new Vector3(1.15f, 0.06f, 1.65f), Stainless);
+            CreatePrim(PrimitiveType.Cylinder, "PlateStack", parent, new Vector3(2.55f, 0.95f, 1.2f), new Vector3(0.35f, 0.08f, 0.35f), SoftWhite);
+            CreatePrim(PrimitiveType.Cylinder, "PlateStack2", parent, new Vector3(2.55f, 1.05f, 1.2f), new Vector3(0.32f, 0.06f, 0.32f), SoftWhite);
+        }
+
+        private void BuildStoveOven(Transform parent)
+        {
+            var root = new GameObject("StoveOven");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(-2.55f, 0f, 1.15f);
+
+            CreatePrim(PrimitiveType.Cube, "RangeBody", root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(1.35f, 0.9f, 0.95f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "OvenDoor", root.transform, new Vector3(0f, 0.35f, -0.48f), new Vector3(1.05f, 0.55f, 0.06f), CastIron);
+            CreatePrim(PrimitiveType.Cube, "OvenWindow", root.transform, new Vector3(0f, 0.38f, -0.52f), new Vector3(0.7f, 0.32f, 0.03f), Navy * 1.4f);
+            CreatePrim(PrimitiveType.Cube, "OvenHandle", root.transform, new Vector3(0f, 0.58f, -0.56f), new Vector3(0.55f, 0.04f, 0.05f), Gold);
+            CreatePrim(PrimitiveType.Cube, "Cooktop", root.transform, new Vector3(0f, 0.92f, 0f), new Vector3(1.4f, 0.06f, 1.0f), CastIron);
+
+            // Four burners
+            var burnerOffsets = new[]
+            {
+                new Vector3(-0.32f, 0.97f, 0.18f),
+                new Vector3(0.32f, 0.97f, 0.18f),
+                new Vector3(-0.32f, 0.97f, -0.22f),
+                new Vector3(0.32f, 0.97f, -0.22f)
+            };
+            for (var i = 0; i < burnerOffsets.Length; i++)
+            {
+                CreatePrim(PrimitiveType.Cylinder, $"Burner_{i}", root.transform, burnerOffsets[i], new Vector3(0.28f, 0.02f, 0.28f), Stainless);
+                CreatePrim(PrimitiveType.Cylinder, $"BurnerCore_{i}", root.transform,
+                    burnerOffsets[i] + new Vector3(0f, 0.02f, 0f), new Vector3(0.12f, 0.015f, 0.12f), WarmAmber);
+            }
+
+            CreatePrim(PrimitiveType.Cube, "ControlPanel", root.transform, new Vector3(0f, 1.05f, 0.42f), new Vector3(1.2f, 0.22f, 0.08f), Stainless);
+            CreatePrim(PrimitiveType.Cylinder, "KnobL", root.transform, new Vector3(-0.35f, 1.05f, 0.48f), new Vector3(0.08f, 0.04f, 0.08f), Gold);
+            CreatePrim(PrimitiveType.Cylinder, "KnobR", root.transform, new Vector3(0.35f, 1.05f, 0.48f), new Vector3(0.08f, 0.04f, 0.08f), Teal);
+            CreatePrim(PrimitiveType.Cylinder, "SaucePot", root.transform, new Vector3(-0.32f, 1.12f, 0.18f), new Vector3(0.3f, 0.14f, 0.3f), Stainless);
+            CreatePrim(PrimitiveType.Cylinder, "SaucePotLid", root.transform, new Vector3(-0.32f, 1.26f, 0.18f), new Vector3(0.28f, 0.03f, 0.28f), StainlessDark);
+        }
+
+        private void BuildPotShelf(Transform parent)
+        {
+            var root = new GameObject("PotShelf");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(2.2f, 2.05f, 2.55f);
+
+            CreatePrim(PrimitiveType.Cube, "ShelfBoard", root.transform, new Vector3(0f, 0f, 0f), new Vector3(2.2f, 0.07f, 0.45f), WarmWood);
+            CreatePrim(PrimitiveType.Cube, "ShelfBracketL", root.transform, new Vector3(-0.95f, -0.2f, 0.05f), new Vector3(0.08f, 0.35f, 0.3f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "ShelfBracketR", root.transform, new Vector3(0.95f, -0.2f, 0.05f), new Vector3(0.08f, 0.35f, 0.3f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "ShelfRail", root.transform, new Vector3(0f, 0.18f, -0.18f), new Vector3(2.0f, 0.04f, 0.04f), Teal);
+
+            CreatePrim(PrimitiveType.Cylinder, "PotA", root.transform, new Vector3(-0.7f, 0.22f, 0.05f), new Vector3(0.38f, 0.2f, 0.38f), Stainless);
+            CreatePrim(PrimitiveType.Cylinder, "PotALid", root.transform, new Vector3(-0.7f, 0.42f, 0.05f), new Vector3(0.36f, 0.04f, 0.36f), Gold);
+            CreatePrim(PrimitiveType.Cylinder, "PotB", root.transform, new Vector3(0f, 0.18f, 0.05f), new Vector3(0.32f, 0.16f, 0.32f), StainlessDark);
+            CreatePrim(PrimitiveType.Cylinder, "PotBHandle", root.transform, new Vector3(0.22f, 0.22f, 0.05f), new Vector3(0.18f, 0.03f, 0.05f), CastIron);
+            CreatePrim(PrimitiveType.Cylinder, "PotC", root.transform, new Vector3(0.7f, 0.2f, 0.05f), new Vector3(0.34f, 0.18f, 0.34f), Stainless);
+            CreatePrim(PrimitiveType.Sphere, "PotCLidKnob", root.transform, new Vector3(0.7f, 0.4f, 0.05f), new Vector3(0.08f, 0.08f, 0.08f), Teal);
+        }
+
+        private void BuildPassWindowStation(Transform parent)
+        {
+            CreatePrim(PrimitiveType.Cube, "PassWall", parent, new Vector3(0f, 1.55f, 1.18f), new Vector3(3.2f, 2.0f, 0.14f), StainlessDark);
+            CreatePrim(PrimitiveType.Cube, "PassFrame", parent, new Vector3(0f, 1.5f, 1.1f), new Vector3(2.0f, 1.05f, 0.1f), Teal);
+            CreatePrim(PrimitiveType.Cube, "PassWindow", parent, new Vector3(0f, 1.5f, 1.05f), new Vector3(1.65f, 0.78f, 0.06f), Gold);
+            CreatePrim(PrimitiveType.Cube, "PassShelf", parent, new Vector3(0f, 1.08f, 0.85f), new Vector3(2.5f, 0.07f, 0.55f), Stainless);
+            CreatePrim(PrimitiveType.Cube, "PassShelfLip", parent, new Vector3(0f, 1.14f, 0.6f), new Vector3(2.5f, 0.05f, 0.05f), Gold);
+            CreatePrim(PrimitiveType.Cube, "TicketRail", parent, new Vector3(0f, 2.15f, 1.05f), new Vector3(1.8f, 0.04f, 0.04f), Teal);
+            CreatePrim(PrimitiveType.Cube, "TicketA", parent, new Vector3(-0.4f, 1.95f, 1.02f), new Vector3(0.22f, 0.28f, 0.02f), SoftWhite);
+            CreatePrim(PrimitiveType.Cube, "TicketB", parent, new Vector3(0.15f, 1.95f, 1.02f), new Vector3(0.22f, 0.28f, 0.02f), SoftWhite);
+            CreatePrim(PrimitiveType.Cylinder, "PassPlate", parent, new Vector3(-0.45f, 1.15f, 0.85f), new Vector3(0.35f, 0.03f, 0.35f), SoftWhite);
+            CreatePrim(PrimitiveType.Cylinder, "PassBowl", parent, new Vector3(0.4f, 1.18f, 0.85f), new Vector3(0.28f, 0.08f, 0.28f), Teal * 0.9f);
+        }
+
+        private void BuildKitchenWarmerLights(Transform parent)
+        {
+            var root = new GameObject("WarmerLights");
+            root.transform.SetParent(parent, false);
+
+            CreateWarmerLamp(root.transform, new Vector3(-0.55f, 2.35f, 0.85f), "WarmerL");
+            CreateWarmerLamp(root.transform, new Vector3(0.55f, 2.35f, 0.85f), "WarmerR");
+            CreateWarmerLamp(root.transform, new Vector3(0f, 2.35f, 0.85f), "WarmerC");
+        }
+
+        private void CreateWarmerLamp(Transform parent, Vector3 localPos, string name)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = localPos;
+
+            CreatePrim(PrimitiveType.Cube, "Arm", root.transform, new Vector3(0f, 0.15f, -0.1f), new Vector3(0.06f, 0.06f, 0.35f), StainlessDark);
+            CreatePrim(PrimitiveType.Cylinder, "Canopy", root.transform, new Vector3(0f, 0f, 0f), new Vector3(0.32f, 0.08f, 0.32f), Stainless);
+            CreatePrim(PrimitiveType.Sphere, "Bulb", root.transform, new Vector3(0f, -0.08f, 0f), new Vector3(0.14f, 0.1f, 0.14f), WarmAmber);
+
+            var lightGo = new GameObject("WarmLight");
+            lightGo.transform.SetParent(root.transform, false);
+            lightGo.transform.localPosition = new Vector3(0f, -0.15f, 0f);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Spot;
+            light.color = new Color(1f, 0.78f, 0.45f);
+            light.intensity = 1.8f;
+            light.range = 3.2f;
+            light.spotAngle = 55f;
+            lightGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         }
 
         private void BuildFrontDinerRoom()
@@ -755,7 +908,17 @@ namespace BackbeatDiner.Core
                 mat = navyMaterial;
             }
 
-            go.GetComponent<MeshRenderer>().sharedMaterial = mat != null ? mat : CreateRuntimeMat(color, lit: true);
+            var metallic = IsStainlessTone(color);
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat != null
+                ? mat
+                : CreateRuntimeMat(color, lit: true, smoothness: metallic ? 0.82f : 0.35f, metallic: metallic ? 0.65f : 0f);
+        }
+
+        private static bool IsStainlessTone(Color color)
+        {
+            return Approximately(color, Stainless)
+                   || Approximately(color, StainlessDark)
+                   || Approximately(color, CastIron);
         }
 
         private static bool Approximately(Color a, Color b)
@@ -765,7 +928,7 @@ namespace BackbeatDiner.Core
                    && Mathf.Abs(a.b - b.b) < 0.02f;
         }
 
-        private static Material CreateRuntimeMat(Color color, bool lit)
+        private static Material CreateRuntimeMat(Color color, bool lit, float smoothness = 0.35f, float metallic = 0f)
         {
             Shader shader = null;
             if (lit)
@@ -789,7 +952,12 @@ namespace BackbeatDiner.Core
 
             if (mat.HasProperty("_Smoothness"))
             {
-                mat.SetFloat("_Smoothness", 0.35f);
+                mat.SetFloat("_Smoothness", smoothness);
+            }
+
+            if (mat.HasProperty("_Metallic"))
+            {
+                mat.SetFloat("_Metallic", metallic);
             }
 
             return mat;
