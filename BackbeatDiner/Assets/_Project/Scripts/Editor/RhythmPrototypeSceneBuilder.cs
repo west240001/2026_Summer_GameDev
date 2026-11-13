@@ -16,6 +16,7 @@ namespace BackbeatDiner.Editor
     {
         private const string ScenePath = "Assets/_Project/Scenes/RhythmPrototype.unity";
         private const string ClickPath = "Assets/_Project/Audio/MetronomeClick.wav";
+        private const string ChartPath = "Assets/_Project/Resources/Charts/Chart_DemoA.asset";
 
         [MenuItem("BACKBEAT DINER/Build Rhythm Prototype Scene")]
         public static void BuildFromMenu()
@@ -69,14 +70,22 @@ namespace BackbeatDiner.Editor
             var bootstrap = root.AddComponent<RhythmPrototypeBootstrap>();
 
             var click = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickPath);
+            var chart = AssetDatabase.LoadAssetAtPath<ChartDefinition>(ChartPath);
+            var so = new SerializedObject(bootstrap);
+            so.FindProperty("buildPlaceholders").boolValue = true;
+            so.FindProperty("bpm").floatValue = chart != null ? chart.Bpm : 120f;
             if (click != null)
             {
-                var so = new SerializedObject(bootstrap);
                 so.FindProperty("metronomeClick").objectReferenceValue = click;
-                so.FindProperty("bpm").floatValue = 120f;
-                so.FindProperty("buildPlaceholders").boolValue = true;
-                so.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            var chartProp = so.FindProperty("chart");
+            if (chartProp != null && chart != null)
+            {
+                chartProp.objectReferenceValue = chart;
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.Refresh();

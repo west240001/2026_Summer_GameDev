@@ -25,6 +25,7 @@ namespace BackbeatDiner.Core
         private static readonly Color WarmAmber = new Color(1f, 0.72f, 0.35f, 1f);
 
         [SerializeField] private AudioClip metronomeClick;
+        [SerializeField] private ChartDefinition chart;
         [SerializeField] private float bpm = 120f;
         [SerializeField] private bool buildPlaceholders = true;
         [SerializeField] private Material goldMaterial;
@@ -64,8 +65,22 @@ namespace BackbeatDiner.Core
                 metronomeClick = Resources.Load<AudioClip>("MetronomeClick") ?? BuildProceduralClick();
             }
 
+            if (chart == null)
+            {
+                chart = Resources.Load<ChartDefinition>("Charts/Chart_DemoA");
+            }
+
             clock.AssignMetronomeClip(metronomeClick);
-            clock.Bpm = bpm;
+            if (chart != null)
+            {
+                clock.ApplyChart(chart);
+                session.ApplyChart(chart);
+                bpm = chart.Bpm;
+            }
+            else
+            {
+                clock.Bpm = bpm;
+            }
 
             var spawn = GameObject.Find("NoteSpawn")?.transform;
             var hit = GameObject.Find("HitLine")?.transform;
@@ -74,7 +89,7 @@ namespace BackbeatDiner.Core
                 CreateLaneAnchors(out spawn, out hit);
             }
 
-            highway.Configure(clock, spawn, hit);
+            highway.Configure(clock, spawn, hit, chart);
 
             var queueRoot = GameObject.Find("CustomerQueueRoot")?.transform;
             if (queueRoot == null)
@@ -109,7 +124,8 @@ namespace BackbeatDiner.Core
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — kitchen BACK + diner FRONT; local 2P.");
+            var chartLabel = chart != null ? chart.name : "(fallback every-beat)";
+            Debug.Log($"[BACKBEAT DINER] VerticalSlicePrototype ready — chart={chartLabel}; kitchen BACK + diner FRONT; local 2P.");
         }
 
         private void ResolveMaterials()

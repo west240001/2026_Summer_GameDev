@@ -1,5 +1,6 @@
 using System.IO;
 using BackbeatDiner.Core;
+using BackbeatDiner.Rhythm;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -19,6 +20,7 @@ namespace BackbeatDiner.Editor
         private const string TealMatPath = "Assets/_Project/Art/Materials/BrandTeal.mat";
         private const string NavyMatPath = "Assets/_Project/Art/Materials/BrandNavy.mat";
         private const string ClickPath = "Assets/_Project/Audio/MetronomeClick.wav";
+        private const string ChartPath = "Assets/_Project/Resources/Charts/Chart_DemoA.asset";
 
         [MenuItem("BACKBEAT DINER/Build Vertical Slice Prototype Scene")]
         public static void BuildFromMenu()
@@ -95,9 +97,10 @@ namespace BackbeatDiner.Editor
             var teal = AssetDatabase.LoadAssetAtPath<Material>(TealMatPath);
             var navy = AssetDatabase.LoadAssetAtPath<Material>(NavyMatPath);
             var click = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickPath);
+            var chart = AssetDatabase.LoadAssetAtPath<ChartDefinition>(ChartPath);
             var so = new SerializedObject(bootstrap);
             so.FindProperty("buildPlaceholders").boolValue = true;
-            so.FindProperty("bpm").floatValue = 120f;
+            so.FindProperty("bpm").floatValue = chart != null ? chart.Bpm : 120f;
             so.FindProperty("customerCount").intValue = 2;
             so.FindProperty("goldMaterial").objectReferenceValue = gold;
             so.FindProperty("tealMaterial").objectReferenceValue = teal;
@@ -110,6 +113,12 @@ namespace BackbeatDiner.Editor
             if (click != null)
             {
                 so.FindProperty("metronomeClick").objectReferenceValue = click;
+            }
+
+            var chartProp = so.FindProperty("chart");
+            if (chartProp != null && chart != null)
+            {
+                chartProp.objectReferenceValue = chart;
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();

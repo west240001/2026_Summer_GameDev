@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e4a91c2b6d84f0e9a3c5d1f8b2e6a40, type: 3}
+  m_Name: Chart_DemoA
+  m_EditorClassIdentifier: BackbeatDiner::BackbeatDiner.Rhythm.ChartDefinition
+  bpm: 120
+  lengthBeats: 32
+  notes:
+  - timeBeats: 2
+    lane: 0
+  - timeBeats: 3
+    lane: 0
+  - timeBeats: 4
+    lane: 1
+  - timeBeats: 5
+    lane: 0
+  - timeBeats: 6
+    lane: 0
+  - timeBeats: 7
+    lane: 2
+  - timeBeats: 8
+    lane: 0
+  - timeBeats: 9
+    lane: 0
+  - timeBeats: 10
+    lane: 1
+  - timeBeats: 11
+    lane: 0
+  - timeBeats: 12
+    lane: 0
+  - timeBeats: 13
+    lane: 0
+  - timeBeats: 14
+    lane: 2
+  - timeBeats: 15
+    lane: 0
+  - timeBeats: 16
+    lane: 0
+  - timeBeats: 17
+    lane: 1
+  - timeBeats: 18
+    lane: 0
+  - timeBeats: 19
+    lane: 0
+  - timeBeats: 20
+    lane: 0
+  - timeBeats: 21
+    lane: 2
+  - timeBeats: 22
+    lane: 0
+  - timeBeats: 23
+    lane: 0
+  - timeBeats: 24
+    lane: 1
+  - timeBeats: 25
+    lane: 0
+  - timeBeats: 26
+    lane: 0
+  - timeBeats: 27
+    lane: 0
+  - timeBeats: 28
+    lane: 2
+  - timeBeats: 29
+    lane: 0
+  - timeBeats: 30
+    lane: 0

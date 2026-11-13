@@ -14,6 +14,7 @@ namespace BackbeatDiner.Rhythm
         private static readonly Color Teal = new Color(0.102f, 0.420f, 0.420f); // #1A6B6B
 
         [SerializeField] private AudioClip metronomeClick;
+        [SerializeField] private ChartDefinition chart;
         [SerializeField] private float bpm = 120f;
         [SerializeField] private bool buildPlaceholders = true;
 
@@ -36,8 +37,21 @@ namespace BackbeatDiner.Rhythm
                 metronomeClick = LoadMetronomeClip() ?? BuildProceduralClick();
             }
 
+            if (chart == null)
+            {
+                chart = Resources.Load<ChartDefinition>("Charts/Chart_DemoA");
+            }
+
             clock.AssignMetronomeClip(metronomeClick);
-            clock.Bpm = bpm;
+            if (chart != null)
+            {
+                clock.ApplyChart(chart);
+                bpm = chart.Bpm;
+            }
+            else
+            {
+                clock.Bpm = bpm;
+            }
 
             var spawn = GameObject.Find("NoteSpawn")?.transform;
             var hit = GameObject.Find("HitLine")?.transform;
@@ -46,7 +60,7 @@ namespace BackbeatDiner.Rhythm
                 CreateLaneAnchors(out spawn, out hit);
             }
 
-            highway.Configure(clock, spawn, hit);
+            highway.Configure(clock, spawn, hit, chart);
 
             var hud = EnsureHud(out var judgement, out var combo, out var bpmLabel);
             hitInput.Configure(clock, highway, judgement, combo, bpmLabel);
@@ -55,7 +69,8 @@ namespace BackbeatDiner.Rhythm
             beatLexicon.Configure(BeatRole.Back, createPadUi: true);
 
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] Week1 RhythmPrototype ready — Space=hit, 1-4=Beat-B1..B4 (8s / same 20s).");
+            var chartLabel = chart != null ? chart.name : "(fallback every-beat)";
+            Debug.Log($"[BACKBEAT DINER] Week1 RhythmPrototype ready — chart={chartLabel}; Space=hit, 1-4=Beat-B1..B4 (8s / same 20s).");
         }
 
         private static AudioClip LoadMetronomeClip()

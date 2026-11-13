@@ -4,20 +4,26 @@ using UnityEngine;
 namespace BackbeatDiner.Rhythm
 {
     /// <summary>
-    /// One-lane scrolling note highway. Notes spawn on beat schedule and move toward a hit line.
+    /// Scrolling note highway. With a <see cref="ChartDefinition"/>, spawns authored notes
+    /// by beat time / lane; otherwise falls back to one note per clock beat.
     /// </summary>
     public sealed class NoteHighway : MonoBehaviour
     {
         [SerializeField] private RhythmClock clock;
+        [SerializeField] private ChartDefinition chart;
         [SerializeField] private Transform spawnPoint;
         [SerializeField] private Transform hitLine;
         [SerializeField] private float approachBeats = 2f;
+        [SerializeField] private float laneSpacing = 0.55f;
         [SerializeField] private float noteScale = 0.32f;
         [SerializeField] private Color noteColor = new Color(0.788f, 0.635f, 0.153f); // #C9A227
         [SerializeField] private Color noteCoreColor = new Color(1f, 0.92f, 0.55f);
         [SerializeField] private bool usePolishedNotes = true;
 
         private readonly List<ActiveNote> _notes = new List<ActiveNote>(32);
+        private readonly List<ChartNote> _chartNotes = new List<ChartNote>(64);
+        private int _nextChartIndex;
+        private bool _useChart;
         private Material _noteMaterial;
         private Material _noteCoreMaterial;
         private double _approachSeconds;
@@ -26,6 +32,7 @@ namespace BackbeatDiner.Rhythm
         {
             public GameObject Go;
             public double TargetDsp;
+            public int Lane;
             public bool Consumed;
         }
 
@@ -42,7 +49,7 @@ namespace BackbeatDiner.Rhythm
                         continue;
                     }
 
-                    list.Add(new ActiveNoteProxy(n.Go, n.TargetDsp));
+                    list.Add(new ActiveNoteProxy(n.Go, n.TargetDsp, n.Lane));
                 }
 
                 return list;
@@ -53,15 +60,17 @@ namespace BackbeatDiner.Rhythm
         {
             public readonly GameObject Go;
             public readonly double TargetDsp;
+            public readonly int Lane;
 
-            public ActiveNoteProxy(GameObject go, double targetDsp)
+            public ActiveNoteProxy(GameObject go, double targetDsp, int lane = 0)
             {
                 Go = go;
                 TargetDsp = targetDsp;
+                Lane = lane;
             }
         }
 
-        public void Configure(RhythmClock rhythmClock, Transform spawn, Transform hit)
+        public void Configure(RhythmClock rhythmClock, Transform spawn, Transform hit, ChartDefinition definition = null)
         {
             if (clock != null)
             {
@@ -71,8 +80,37 @@ namespace BackbeatDiner.Rhythm
             clock = rhythmClock;
             spawnPoint = spawn;
             hitLine = hit;
+            LoadChart(definition != null ? definition : chart);
 
-            if (isActiveAndEnabled && clock != null)
+            if (isActiveAndEnabled && clock != null && !_useChart)
+            {
+                clock.OnBeat += HandleBeat;
+            }
+        }
+
+        /// <summary>Load authored chart notes (sorted by time). Null clears chart mode.</summary>
+        public void LoadChart(ChartDefinition definition)
+        {
+            if (clock != null)
+            {
+                clock.OnBeat -= HandleBeat;
+            }
+
+            chart = definition;
+            _chartNotes.Clear();
+            _nextChartIndex = 0;
+            _useChart = definition != null && definition.Notes.Length > 0;
+
+            if (_useChart)
+            {
+                for (var i = 0; i < definition.Notes.Length; i++)
+                {
+                    _chartNotes.Add(definition.Notes[i]);
+                }
+
+                _chartNotes.Sort((a, b) => a.timeBeats.CompareTo(b.timeBeats));
+            }
+            else if (isActiveAndEnabled && clock != null)
             {
                 clock.OnBeat += HandleBeat;
             }
@@ -80,7 +118,7 @@ namespace BackbeatDiner.Rhythm
 
         private void OnEnable()
         {
-            if (clock != null)
+            if (clock != null && !_useChart)
             {
                 clock.OnBeat -= HandleBeat;
                 clock.OnBeat += HandleBeat;
@@ -109,6 +147,8 @@ namespace BackbeatDiner.Rhythm
             }
 
             RefreshApproach();
+            SpawnUpcomingChartNotes();
+
             var now = AudioSettings.dspTime;
             var spawnPos = spawnPoint.position;
             var hitPos = hitLine.position;
@@ -127,7 +167,10 @@ namespace BackbeatDiner.Rhythm
                     ? 1.0
                     : (now - start) / _approachSeconds;
                 t = System.Math.Max(0.0, System.Math.Min(1.4, t));
-                note.Go.transform.position = Vector3.LerpUnclamped(spawnPos, hitPos, (float)t);
+                var laneOffset = LaneOffset(note.Lane);
+                var from = spawnPos + laneOffset;
+                var to = hitPos + laneOffset;
+                note.Go.transform.position = Vector3.LerpUnclamped(from, to, (float)t);
 
                 // Despawn shortly after passing the hit line if not hit.
                 if (!note.Consumed && now > note.TargetDsp + 0.25)
@@ -175,22 +218,47 @@ namespace BackbeatDiner.Rhythm
             return true;
         }
 
-        private void HandleBeat(int beatIndex, double scheduledDsp)
+        private void SpawnUpcomingChartNotes()
         {
-            // Spawn a note that will arrive `approachBeats` later.
-            var target = scheduledDsp + approachBeats * clock.SecondsPerBeat;
-            SpawnNote(target);
+            if (!_useChart || clock == null || !clock.IsRunning)
+            {
+                return;
+            }
+
+            var now = AudioSettings.dspTime;
+            while (_nextChartIndex < _chartNotes.Count)
+            {
+                var cn = _chartNotes[_nextChartIndex];
+                var target = clock.BeatToDspTime(cn.timeBeats);
+                var spawnAt = target - _approachSeconds;
+                if (now + 0.02 < spawnAt)
+                {
+                    break;
+                }
+
+                SpawnNote(target, cn.lane);
+                _nextChartIndex++;
+            }
         }
 
-        private void SpawnNote(double targetDsp)
+        private void HandleBeat(int beatIndex, double scheduledDsp)
+        {
+            // Fallback: spawn a note that will arrive `approachBeats` later.
+            _ = beatIndex;
+            var target = scheduledDsp + approachBeats * clock.SecondsPerBeat;
+            SpawnNote(target, 0);
+        }
+
+        private void SpawnNote(double targetDsp, int lane)
         {
             EnsureMaterial();
             var go = usePolishedNotes
                 ? GameObject.CreatePrimitive(PrimitiveType.Sphere)
                 : GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = "Note";
+            go.name = lane == 0 ? "Note" : $"Note_L{lane}";
             go.transform.SetParent(transform, worldPositionStays: true);
-            go.transform.position = spawnPoint != null ? spawnPoint.position : transform.position;
+            var origin = spawnPoint != null ? spawnPoint.position : transform.position;
+            go.transform.position = origin + LaneOffset(lane);
             go.transform.localScale = usePolishedNotes
                 ? new Vector3(noteScale * 1.15f, noteScale * 0.55f, noteScale * 1.35f)
                 : Vector3.one * noteScale;
@@ -232,8 +300,22 @@ namespace BackbeatDiner.Rhythm
             {
                 Go = go,
                 TargetDsp = targetDsp,
+                Lane = lane,
                 Consumed = false
             });
+        }
+
+        private Vector3 LaneOffset(int lane)
+        {
+            // Lane 0 center; ± alternate left/right for visual separation.
+            if (lane <= 0)
+            {
+                return Vector3.zero;
+            }
+
+            var side = (lane % 2 == 1) ? -1f : 1f;
+            var rank = (lane + 1) / 2;
+            return new Vector3(side * rank * laneSpacing, 0f, 0f);
         }
 
         private void RefreshApproach()

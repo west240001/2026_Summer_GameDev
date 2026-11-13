@@ -45,8 +45,20 @@ namespace BackbeatDiner.Core
         public int SalesScore => _salesScore;
         public bool IsEnded => _ended;
         public bool IsRunning => _running && !_ended;
+        public int MaxBeats => maxBeats;
 
         public event Action OnSessionEnded;
+
+        /// <summary>Apply chart length (beats) from a <see cref="ChartDefinition"/>.</summary>
+        public void ApplyChart(ChartDefinition chart)
+        {
+            if (chart == null)
+            {
+                return;
+            }
+
+            maxBeats = Mathf.Max(1, Mathf.RoundToInt(chart.LengthBeats));
+        }
 
         public void Bind(
             RhythmClock clock,

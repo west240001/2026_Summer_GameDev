@@ -16,8 +16,10 @@ namespace BackbeatDiner.Rhythm
         [SerializeField] private double scheduleLookAhead = 0.08;
 
         private double _nextBeatDspTime;
+        private double _startDspTime;
         private int _beatIndex;
         private bool _running;
+        private ChartDefinition _chart;
 
         public float Bpm
         {
@@ -38,7 +40,30 @@ namespace BackbeatDiner.Rhythm
 
         public double NextBeatDspTime => _nextBeatDspTime;
 
+        /// <summary>DSP time of beat 0 when the clock was last started.</summary>
+        public double StartDspTime => _startDspTime;
+
         public bool IsRunning => _running;
+
+        public ChartDefinition Chart => _chart;
+
+        /// <summary>Apply BPM (and retain reference) from a <see cref="ChartDefinition"/>.</summary>
+        public void ApplyChart(ChartDefinition chart)
+        {
+            _chart = chart;
+            if (chart == null)
+            {
+                return;
+            }
+
+            Bpm = chart.Bpm;
+        }
+
+        /// <summary>Absolute DSP time for a beat index relative to <see cref="StartDspTime"/>.</summary>
+        public double BeatToDspTime(float beatTime)
+        {
+            return _startDspTime + beatTime * SecondsPerBeat;
+        }
 
         /// <summary>Args: beatIndex, scheduledDspTime.</summary>
         public event Action<int, double> OnBeat;
@@ -82,9 +107,11 @@ namespace BackbeatDiner.Rhythm
         public void StartClock(double startDelaySeconds = 0.25)
         {
             _beatIndex = 0;
-            _nextBeatDspTime = AudioSettings.dspTime + Math.Max(0.05, startDelaySeconds);
+            _startDspTime = AudioSettings.dspTime + Math.Max(0.05, startDelaySeconds);
+            _nextBeatDspTime = _startDspTime;
             _running = true;
-            Debug.Log($"[RhythmClock] Started @ {bpm} BPM, first beat dsp={_nextBeatDspTime:F3}");
+            var chartName = _chart != null ? _chart.name : "(no chart)";
+            Debug.Log($"[RhythmClock] Started @ {bpm} BPM, chart={chartName}, first beat dsp={_nextBeatDspTime:F3}");
         }
 
         public void StopClock()
