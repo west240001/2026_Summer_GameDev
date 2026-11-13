@@ -7,7 +7,7 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/_Project/Scenes/RhythmPrototype.unity
-    guid: e201rhythmprototypescene00000001
+    guid: 6ae4e10b55092ef50bcd7b4f11a7377a
   - enabled: 1
     path: Assets/Scenes/Bootstrap.unity
     guid: bdbd0a1e2f3c4056a7b8c9d0e1f20304
