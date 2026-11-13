@@ -419,9 +419,18 @@ namespace BackbeatDiner.Coop
                 ? queue.BuildCustomerSummaryLine()
                 : $"待ち客: {customers}";
             var stockSummary = inventory != null ? inventory.SummaryText : "在庫: —";
-            inventory?.CopyStockSnapshot(out var names, out var levels);
-            names ??= Array.Empty<string>();
-            levels ??= Array.Empty<float>();
+            string[] names;
+            float[] levels;
+            if (inventory != null)
+            {
+                inventory.CopyStockSnapshot(out names, out levels);
+            }
+            else
+            {
+                names = Array.Empty<string>();
+                levels = Array.Empty<float>();
+            }
+
             return new SnapshotPayload(customers, customerLine, stockSummary, names, levels, gapPreferred);
         }
     }
