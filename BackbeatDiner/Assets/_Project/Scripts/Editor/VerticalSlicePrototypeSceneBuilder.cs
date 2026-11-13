@@ -25,7 +25,7 @@ namespace BackbeatDiner.Editor
             BuildScene(setInBuildSettings: true);
             EditorUtility.DisplayDialog(
                 "BACKBEAT DINER",
-                "VerticalSlicePrototype.unity を作成しました。\n左=裏チャート / 右=表ミニ。Space=ヒット、F=インスタントクック。",
+                "VerticalSlicePrototype.unity を作成しました。\n左=裏チャート / 右=表ミニ。\nSpace=裏ヒット、F=インスタントクック→配膳リズム（Space/J/K）。\n配膳中は 1–4 コミュ送信ロック。",
                 "OK");
         }
 

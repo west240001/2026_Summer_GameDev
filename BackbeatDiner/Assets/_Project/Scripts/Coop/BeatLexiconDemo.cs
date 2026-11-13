@@ -1,4 +1,5 @@
 using System;
+using BackbeatDiner.Front;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -6,6 +7,7 @@ namespace BackbeatDiner.Coop
 {
     /// <summary>
     /// Placeholder for KG-3 beat lexicon: keys 1–4 play short procedural SE motifs.
+    /// Blocked while <see cref="ServeRhythmWindow.FrontCommsSendLocked"/> (配膳中).
     /// </summary>
     public sealed class BeatLexiconDemo : MonoBehaviour
     {
@@ -66,6 +68,12 @@ namespace BackbeatDiner.Coop
 
         private void Play(int index, string label)
         {
+            if (ServeRhythmWindow.FrontCommsSendLocked)
+            {
+                Debug.Log("[BeatLexiconDemo] Send blocked — 配膳リズム中 (FrontCommsSendLocked)");
+                return;
+            }
+
             if (_motifs == null || index < 0 || index >= _motifs.Length)
             {
                 return;

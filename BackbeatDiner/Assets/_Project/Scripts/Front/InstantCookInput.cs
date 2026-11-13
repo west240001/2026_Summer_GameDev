@@ -6,12 +6,14 @@ using UnityEngine.UI;
 namespace BackbeatDiner.Front
 {
     /// <summary>
-    /// v0 front mini: one-button Instant Cook — consumes 1 仕込み and serves a dummy customer.
+    /// v0 front mini: Instant Cook press → opens F1+ <see cref="ServeRhythmWindow"/> (S1),
+    /// then consumes 1 仕込み and serves a dummy customer with tip from rhythm judgement.
     /// </summary>
     public sealed class InstantCookInput : MonoBehaviour
     {
         [SerializeField] private DaySessionState session;
         [SerializeField] private DummyCustomerQueue queue;
+        [SerializeField] private ServeRhythmWindow serveRhythm;
         [SerializeField] private Text feedbackLabel;
         [SerializeField] private bool inputEnabled = true;
 
@@ -23,11 +25,16 @@ namespace BackbeatDiner.Front
             set => inputEnabled = value;
         }
 
-        public void Configure(DaySessionState daySession, DummyCustomerQueue customerQueue, Text feedback)
+        public void Configure(
+            DaySessionState daySession,
+            DummyCustomerQueue customerQueue,
+            Text feedback,
+            ServeRhythmWindow rhythmWindow = null)
         {
             session = daySession;
             queue = customerQueue;
             feedbackLabel = feedback;
+            serveRhythm = rhythmWindow;
         }
 
         private void Update()
@@ -37,6 +44,11 @@ namespace BackbeatDiner.Front
                 inputEnabled = false;
             }
 
+            if (serveRhythm != null && serveRhythm.IsOpen)
+            {
+                return;
+            }
+
             if (inputEnabled && WasCookPressed())
             {
                 TryInstantCook();
@@ -44,7 +56,7 @@ namespace BackbeatDiner.Front
 
             if (feedbackLabel != null && Time.time > _flashUntil && session != null && !session.IsEnded)
             {
-                feedbackLabel.text = "F / Enter = インスタントクック（提供）";
+                feedbackLabel.text = "F / Enter = インスタントクック → 配膳リズム";
                 feedbackLabel.color = FrontHudController.Gold;
             }
         }
@@ -81,20 +93,46 @@ namespace BackbeatDiner.Front
                 return;
             }
 
-            if (queue == null || !queue.TryServeOldest(out var patience))
+            if (queue == null || queue.ActiveCount <= 0)
             {
                 Flash("客待ちなし", false);
                 return;
             }
 
-            if (!session.TryConsumePrepForServe(patience))
+            if (serveRhythm != null)
+            {
+                // Peek patience by serving only after rhythm window accepts the reservation.
+                if (!queue.TryServeOldest(out var patience))
+                {
+                    Flash("客待ちなし", false);
+                    return;
+                }
+
+                if (!serveRhythm.TryOpen(patience))
+                {
+                    Flash("配膳リズム開始失敗", false);
+                    return;
+                }
+
+                Flash("配膳リズム！ Space / J·K", true);
+                return;
+            }
+
+            // Fallback without rhythm window (e.g. FrontShell-only scenes).
+            if (!queue.TryServeOldest(out var patienceFallback))
+            {
+                Flash("客待ちなし", false);
+                return;
+            }
+
+            if (!session.TryConsumePrepForServe(patienceFallback))
             {
                 Flash("仕込み不足", false);
                 return;
             }
 
-            Flash($"提供成功 +{100 + Mathf.RoundToInt(patience * 50f)}", true);
-            Debug.Log($"[InstantCook] Serve ok patience={patience:0.00} prepLeft={session.PrepUnits}");
+            Flash($"提供成功 +{100 + Mathf.RoundToInt(patienceFallback * 50f)}", true);
+            Debug.Log($"[InstantCook] Serve ok patience={patienceFallback:0.00} prepLeft={session.PrepUnits}");
         }
 
         private void Flash(string msg, bool ok)

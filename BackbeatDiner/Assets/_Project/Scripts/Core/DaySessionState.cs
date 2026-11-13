@@ -119,7 +119,46 @@ namespace BackbeatDiner.Core
             }
         }
 
+        /// <summary>
+        /// Instant Cook path without rhythm (legacy / FrontShell). Base 100 + patience tip.
+        /// </summary>
         public bool TryConsumePrepForServe(float patienceRatio)
+        {
+            return TryConsumePrepForServe(patienceRatio, tipMultiplier: 1f, HitJudgement.Good);
+        }
+
+        /// <summary>Reserve 1 prep unit at Instant Cook start; tip applied in <see cref="CompleteServeWithRhythm"/>.</summary>
+        public bool TryReservePrepForServe()
+        {
+            if (_ended || !_running || _prepUnits <= 0)
+            {
+                return false;
+            }
+
+            _prepUnits--;
+            RefreshHud();
+            return true;
+        }
+
+        /// <summary>
+        /// Finish a reserved serve after F1+ S1. Base sales always kept; tip = patience×50×mult
+        /// (Miss → mult 0 = tip only missing per KG-2).
+        /// </summary>
+        public void CompleteServeWithRhythm(float patienceRatio, float tipMultiplier, HitJudgement serveJudgement)
+        {
+            if (_ended)
+            {
+                return;
+            }
+
+            _servedCount++;
+            var tip = Mathf.RoundToInt(Mathf.Clamp01(patienceRatio) * 50f * Mathf.Max(0f, tipMultiplier));
+            _salesScore += 100 + tip;
+            RefreshHud();
+            Debug.Log($"[DaySessionState] Serve+rhythm {serveJudgement} tip={tip} mult={tipMultiplier:0.##} sales={_salesScore}");
+        }
+
+        public bool TryConsumePrepForServe(float patienceRatio, float tipMultiplier, HitJudgement serveJudgement)
         {
             if (_ended || !_running || _prepUnits <= 0)
             {
@@ -128,10 +167,11 @@ namespace BackbeatDiner.Core
 
             _prepUnits--;
             _servedCount++;
-            // Base 100 + leftover patience bonus (0–50).
-            var bonus = Mathf.RoundToInt(Mathf.Clamp01(patienceRatio) * 50f);
-            _salesScore += 100 + bonus;
+            // Base 100 always; tip scaled by rhythm (Miss → 0 tip).
+            var tip = Mathf.RoundToInt(Mathf.Clamp01(patienceRatio) * 50f * Mathf.Max(0f, tipMultiplier));
+            _salesScore += 100 + tip;
             RefreshHud();
+            _ = serveJudgement;
             return true;
         }
 

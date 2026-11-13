@@ -1,3 +1,4 @@
+using BackbeatDiner.Coop;
 using BackbeatDiner.Front;
 using BackbeatDiner.Rhythm;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace BackbeatDiner.Core
 {
     /// <summary>
     /// Vertical slice: left = back rhythm chart, right = front mini diner.
-    /// Shared <see cref="DaySessionState"/> links Perfect/Good → 仕込み and Instant Cook → 提供.
+    /// Shared <see cref="DaySessionState"/> links Perfect/Good → 仕込み and Instant Cook → F1+ 配膳リズム → 提供.
     /// </summary>
     public sealed class VerticalSliceBootstrap : MonoBehaviour
     {
@@ -44,6 +45,8 @@ namespace BackbeatDiner.Core
             var queue = systems.AddComponent<DummyCustomerQueue>();
             var inventory = systems.AddComponent<InventoryBar>();
             var cook = systems.AddComponent<InstantCookInput>();
+            var serveRhythm = systems.AddComponent<ServeRhythmWindow>();
+            systems.AddComponent<BeatLexiconDemo>();
 
             if (metronomeClick == null)
             {
@@ -80,11 +83,12 @@ namespace BackbeatDiner.Core
             hitInput.Configure(clock, highway, judgement, combo, bpmLabel);
             hitInput.Window = JudgeWindow.Default;
             session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody);
-            cook.Configure(session, queue, cookFeedback);
+            serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback);
+            cook.Configure(session, queue, cookFeedback, serveRhythm);
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — Space=裏ヒット, F/Enter=表インスタントクック, ~32拍 or 30s で結果.");
+            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — Space=裏ヒット, F/Enter=インスタントクック→配膳リズム(Space/J/K), 1–4=コミュ(配膳中ロック), ~32拍 or 30s で結果.");
         }
 
         private void ResolveMaterials()
@@ -280,11 +284,15 @@ namespace BackbeatDiner.Core
             prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-24f, -56f), TextAnchor.UpperRight, 28, Gold);
             serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-24f, -100f), TextAnchor.UpperRight, 28, Teal);
             timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -18f), TextAnchor.UpperCenter, 22, Gold);
-            cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", "F / Enter = インスタントクック（提供）", new Vector2(-24f, -150f), TextAnchor.UpperRight, 18, Gold);
+            cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", "F / Enter = インスタントクック → 配膳リズム", new Vector2(-24f, -150f), TextAnchor.UpperRight, 18, Gold);
+
+            EnsureLabel(canvasGo.transform, "ServeRhythmHint",
+                "配膳リズム: Space / J·K（Perfect×1.5 / Good×1 / Miss=チップなし）",
+                new Vector2(-24f, -186f), TextAnchor.UpperRight, 16, Teal);
 
             EnsureLabel(canvasGo.transform, "HelpLabel",
-                "左: Space / A = ヒット　　右: F / Enter / X = インスタントクック　　約32拍 or 30秒で営業終了",
-                new Vector2(0f, 28f), TextAnchor.LowerCenter, 18, Gold);
+                "左: Space / A = ヒット　　右: F / Enter → 配膳リズム（Space / J·K）　　1–4=コミュ（配膳中ロック）　　約32拍 or 30秒で終了",
+                new Vector2(0f, 28f), TextAnchor.LowerCenter, 16, Gold);
 
             var rowGo = canvasGo.transform.Find("InventoryRow");
             if (rowGo == null)
