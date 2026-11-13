@@ -161,13 +161,39 @@ namespace BackbeatDiner.Back
 
             if (_surveillanceCam == null)
             {
+                // Do not use `??` with GetComponent — Unity "fake null" destroyed Cameras are
+                // non-null in C# and skip AddComponent, then throw MissingComponentException on use.
+                // Scene reloads can also leave a named GO whose Camera is already destroyed.
                 var camGo = GameObject.Find("SurveillanceCamera");
-                if (camGo == null)
+                Camera existing = null;
+                if (camGo != null)
                 {
-                    camGo = new GameObject("SurveillanceCamera");
+                    existing = camGo.GetComponent<Camera>();
                 }
 
-                _surveillanceCam = camGo.GetComponent<Camera>() ?? camGo.AddComponent<Camera>();
+                if (existing == null)
+                {
+                    if (camGo != null)
+                    {
+                        // Rename so deferred Destroy cannot be re-found as SurveillanceCamera this frame.
+                        camGo.name = "SurveillanceCamera_Stale";
+                        Destroy(camGo);
+                    }
+
+                    camGo = new GameObject("SurveillanceCamera");
+                    _surveillanceCam = camGo.AddComponent<Camera>();
+                }
+                else
+                {
+                    _surveillanceCam = existing;
+                }
+
+                if (_surveillanceCam == null)
+                {
+                    Debug.LogError("[Surveillance] Failed to create SurveillanceCamera");
+                    return;
+                }
+
                 _surveillanceCam.enabled = false;
                 _surveillanceCam.targetTexture = _rt;
                 _surveillanceCam.clearFlags = CameraClearFlags.Skybox;

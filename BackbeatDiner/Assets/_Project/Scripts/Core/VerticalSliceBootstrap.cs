@@ -176,8 +176,16 @@ namespace BackbeatDiner.Core
             // C1: Back Q → Quest SE + Front toast/icon (CD 15s; blocked while notes active)
             questReceive.Configure();
             questRequest.Configure(highway);
-            // KG-4: Back surveillance of FrontCamera (~2Hz); only when viewing Back
-            _surveillance.Configure(highway, _frontCam);
+            // KG-4: Back surveillance of FrontCamera (~2Hz); only when viewing Back.
+            // Must not abort Start before setlist/clock — a thrown Configure previously blocked notes.
+            try
+            {
+                _surveillance.Configure(highway, _frontCam);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Surveillance] Configure failed (notes still start): {ex.Message}");
+            }
 
             ApplyRolePresentation();
             _sessionStarted = true;
@@ -247,7 +255,8 @@ namespace BackbeatDiner.Core
             }
 
             var nm = NetworkManager.Singleton;
-            return nm != null && nm.IsListening && nm.IsClient && !nm.IsServer;
+            // Require a live connected client — stale Client mode without NGO must not skip StartSetlist.
+            return nm != null && nm.IsListening && nm.IsConnectedClient && nm.IsClient && !nm.IsServer;
         }
 
         private void TryBindNetSessionSync(
