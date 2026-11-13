@@ -11,6 +11,7 @@ namespace BackbeatDiner.Rhythm
     {
         [SerializeField] private float bpm = 120f;
         [SerializeField] private AudioSource metronomeSource;
+        [SerializeField] private AudioSource songSource;
         [SerializeField] private AudioClip metronomeClick;
         [SerializeField] private bool playMetronomeClick = true;
         [SerializeField] private double scheduleLookAhead = 0.08;
@@ -20,6 +21,7 @@ namespace BackbeatDiner.Rhythm
         private int _beatIndex;
         private bool _running;
         private ChartDefinition _chart;
+        private AudioClip _songClip;
 
         public float Bpm
         {
@@ -47,10 +49,12 @@ namespace BackbeatDiner.Rhythm
 
         public ChartDefinition Chart => _chart;
 
-        /// <summary>Apply BPM (and retain reference) from a <see cref="ChartDefinition"/>.</summary>
+        /// <summary>Apply BPM / optional song clip (and retain reference) from a <see cref="ChartDefinition"/>.</summary>
         public void ApplyChart(ChartDefinition chart)
         {
+            StopSong();
             _chart = chart;
+            _songClip = chart != null ? chart.SongClip : null;
             if (chart == null)
             {
                 return;
@@ -70,6 +74,16 @@ namespace BackbeatDiner.Rhythm
 
         private void Awake()
         {
+            EnsureAudioSources();
+
+            if (metronomeClick == null)
+            {
+                metronomeClick = Resources.Load<AudioClip>("MetronomeClick");
+            }
+        }
+
+        private void EnsureAudioSources()
+        {
             if (metronomeSource == null)
             {
                 metronomeSource = gameObject.GetComponent<AudioSource>();
@@ -82,10 +96,14 @@ namespace BackbeatDiner.Rhythm
             metronomeSource.playOnAwake = false;
             metronomeSource.spatialBlend = 0f;
 
-            if (metronomeClick == null)
+            if (songSource == null)
             {
-                metronomeClick = Resources.Load<AudioClip>("MetronomeClick");
+                songSource = gameObject.AddComponent<AudioSource>();
             }
+
+            songSource.playOnAwake = false;
+            songSource.spatialBlend = 0f;
+            songSource.loop = false;
         }
 
         private void Update()
@@ -111,17 +129,23 @@ namespace BackbeatDiner.Rhythm
 
         public void StartClock(double startDelaySeconds = 0.25)
         {
+            EnsureAudioSources();
             _beatIndex = 0;
             _startDspTime = AudioSettings.dspTime + Math.Max(0.05, startDelaySeconds);
             _nextBeatDspTime = _startDspTime;
             _running = true;
+            ScheduleSongAtStart();
             var chartName = _chart != null ? _chart.name : "(no chart)";
-            Debug.Log($"[RhythmClock] Started @ {bpm} BPM, chart={chartName}, first beat dsp={_nextBeatDspTime:F3}");
+            var songName = _songClip != null ? _songClip.name : "(no song)";
+            Debug.Log(
+                $"[RhythmClock] Started @ {bpm} BPM, chart={chartName}, song={songName}, " +
+                $"first beat dsp={_nextBeatDspTime:F3}");
         }
 
         public void StopClock()
         {
             _running = false;
+            StopSong();
         }
 
         public double GetNearestBeatDspTime(double dspTime)
@@ -148,12 +172,37 @@ namespace BackbeatDiner.Rhythm
 
         private void FireBeat(int index, double scheduledDsp)
         {
-            if (playMetronomeClick && metronomeSource != null && metronomeClick != null)
+            // Prefer chart song bed over metronome clicks when a clip is assigned.
+            if (playMetronomeClick && _songClip == null && metronomeSource != null && metronomeClick != null)
             {
                 metronomeSource.PlayOneShot(metronomeClick, 0.7f);
             }
 
             OnBeat?.Invoke(index, scheduledDsp);
+        }
+
+        private void ScheduleSongAtStart()
+        {
+            if (songSource == null || _songClip == null)
+            {
+                return;
+            }
+
+            songSource.Stop();
+            songSource.clip = _songClip;
+            songSource.volume = 0.85f;
+            songSource.PlayScheduled(_startDspTime);
+        }
+
+        private void StopSong()
+        {
+            if (songSource == null)
+            {
+                return;
+            }
+
+            songSource.Stop();
+            songSource.clip = null;
         }
 
         public void AssignMetronomeClip(AudioClip clip)

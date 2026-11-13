@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: "\u30C7\u30E2A"
   bpm: 120
   lengthBeats: 32
+  songClip: {fileID: 8300000, guid: c4d5e6f708192a3b4c5d6e7f8091a2b3, type: 3}
   notes:
   - timeBeats: 2
     lane: 0

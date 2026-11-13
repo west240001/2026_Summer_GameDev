@@ -18,6 +18,8 @@ namespace BackbeatDiner.Rhythm
 
         [SerializeField] private float bpm = 120f;
         [SerializeField] private float lengthBeats = 32f;
+        [Tooltip("Optional demo/song bed. Played by RhythmClock from chart start dspTime at this BPM.")]
+        [SerializeField] private AudioClip songClip;
         [SerializeField] private ChartNote[] notes = Array.Empty<ChartNote>();
 
         /// <summary>HUD-facing chart name (Japanese preferred).</summary>
@@ -27,6 +29,9 @@ namespace BackbeatDiner.Rhythm
         public float Bpm => Mathf.Max(1f, bpm);
 
         public float LengthBeats => Mathf.Max(1f, lengthBeats);
+
+        /// <summary>Optional royalty-free song bed for this chart (may be null).</summary>
+        public AudioClip SongClip => songClip;
 
         public ChartNote[] Notes => notes ?? Array.Empty<ChartNote>();
 
