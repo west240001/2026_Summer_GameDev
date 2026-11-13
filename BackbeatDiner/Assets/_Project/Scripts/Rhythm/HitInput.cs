@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -15,15 +16,29 @@ namespace BackbeatDiner.Rhythm
         [SerializeField] private Text judgementText;
         [SerializeField] private Text comboText;
         [SerializeField] private Text bpmText;
+        [SerializeField] private bool inputEnabled = true;
 
         private int _combo;
         private int _score;
+
+        /// <summary>Args: judgement, signed delta seconds, combo, lane score.</summary>
+        public event Action<HitJudgement, double, int, int> OnJudged;
 
         public JudgeWindow Window
         {
             get => window;
             set => window = value;
         }
+
+        public bool InputEnabled
+        {
+            get => inputEnabled;
+            set => inputEnabled = value;
+        }
+
+        public int Combo => _combo;
+
+        public int Score => _score;
 
         public void Configure(RhythmClock rhythmClock, NoteHighway noteHighway, Text judgement, Text combo, Text bpm)
         {
@@ -36,7 +51,7 @@ namespace BackbeatDiner.Rhythm
 
         private void Update()
         {
-            if (WasHitPressed())
+            if (inputEnabled && WasHitPressed())
             {
                 ResolveHit();
             }
@@ -105,6 +120,8 @@ namespace BackbeatDiner.Rhythm
             {
                 judgementText.text = $"判定: {ToJapanese(judgement)} ({delta * 1000.0:F0}ms)";
             }
+
+            OnJudged?.Invoke(judgement, delta, _combo, _score);
         }
 
         private void RefreshHud()

@@ -44,6 +44,48 @@ namespace BackbeatDiner.Front
             Rebuild();
         }
 
+        /// <summary>
+        /// Serve the waiting customer with the least remaining patience. Returns false if none active.
+        /// </summary>
+        public bool TryServeOldest(out float patienceRatio)
+        {
+            patienceRatio = 0f;
+            var bestIndex = -1;
+            var bestRemaining = float.MaxValue;
+            for (var i = 0; i < _slots.Count; i++)
+            {
+                var slot = _slots[i];
+                if (slot.Root == null || !slot.Root.activeSelf)
+                {
+                    continue;
+                }
+
+                if (slot.Remaining < bestRemaining)
+                {
+                    bestRemaining = slot.Remaining;
+                    bestIndex = i;
+                }
+            }
+
+            if (bestIndex < 0)
+            {
+                return false;
+            }
+
+            var served = _slots[bestIndex];
+            patienceRatio = timeoutSeconds > 0f ? Mathf.Clamp01(served.Remaining / timeoutSeconds) : 0f;
+            served.Root.SetActive(false);
+            served.Remaining = timeoutSeconds;
+            served.RespawnAt = Time.time + UnityEngine.Random.Range(1.8f, 3.5f);
+            if (served.Fill != null)
+            {
+                served.Fill.fillAmount = 0f;
+            }
+
+            _slots[bestIndex] = served;
+            return true;
+        }
+
         private void Start()
         {
             if (_slots.Count == 0)

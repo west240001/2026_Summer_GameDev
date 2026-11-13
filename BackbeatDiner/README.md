@@ -20,7 +20,8 @@
 3. 初回起動で **URP / Input System** のパッケージ解決と、必要に応じた **プロジェクト設定のアップグレード** が走ります。差分はレビューしてコミットしてください。
 4. **Week 1 リズム試作**: `Assets/_Project/Scenes/RhythmPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Rhythm Prototype Scene**、または batchmode で `RhythmPrototypeSceneBuilder.BuildFromCommandLine`）。
 5. **Week 2 表 HUD 殻**: `Assets/_Project/Scenes/FrontShellPrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Front Shell Prototype Scene**、または batchmode で `FrontShellPrototypeSceneBuilder.BuildFromCommandLine`）。
-6. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
+6. **縦スライス（1チャート＋表ミニ）**: `Assets/_Project/Scenes/VerticalSlicePrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Vertical Slice Prototype Scene**、または batchmode で `VerticalSlicePrototypeSceneBuilder.BuildFromCommandLine`）。
+7. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
 
 ## Week 1 — Rhythm tick プロト（操作）
 
@@ -43,6 +44,20 @@
 
 ブランド色マテリアル: `Assets/_Project/Art/Materials/BrandGold.mat`（`#C9A227`）/ `BrandTeal.mat`（`#1A6B6B`）。再生成は **BACKBEAT DINER → Build Front Shell Prototype Scene**。
 
+## 縦スライス — 1チャート＋表ミニ（操作）
+
+左右スプリット（左＝裏キッチン / 右＝表ダイナー）。共有資源は **仕込み**（裏ヒットで増加）と **提供**（表インスタントクックで消費）。
+
+| 操作 | 内容 |
+|------|------|
+| **Space** または **Gamepad South (A)** | 裏レーンヒット（Perfect/Good → 仕込み +2/+1） |
+| **F** / **Enter** または **Gamepad West (X)** | 表インスタントクック：仕込み1消費して客を提供（売上仮点数） |
+| 終了 | 約 **32拍** または **30秒** で結果オーバーレイ（**売上仮点数**） |
+| HUD | 仕込み / 提供 / 残り時間・ビート、在庫バー（表） |
+
+シーン: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`  
+再生成: **BACKBEAT DINER → Build Vertical Slice Prototype Scene**（`DaySessionState` / `VerticalSliceBootstrap` / `InstantCookInput`）。
+
 ## フォルダ構成（`Assets/_Project/`）
 
 ```
@@ -61,7 +76,7 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 1. **Week 1 — リズム tick**（着手済み）: `RhythmClock` + メトロノーム WAV + `HitInput` / `NoteHighway` / `BeatLexiconDemo`。シーン `RhythmPrototype`。
 2. **Week 2 — 非対称 HUD 殻**（着手済み）: 表シーン `FrontShellPrototype` — `FrontHudController` / `DummyCustomerQueue` / `InventoryBar` / `BeatReceivePulse`。裏レーンは Week1 `RhythmPrototype` を併用。
 3. **ビート送信プロト**：C3 モチーフ1種の SE + 相手側パルス（KG-3）— キー1–4 の SE と受信パルスは仮置き済み。
-4. **1日縦切り**：4チャートなしで「1曲＋表ミニMG」まで。
+4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — 裏1チャート＋表インスタントクック、共有 `DaySessionState`（仕込み/提供）、結果オーバーレイ。
 5. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
 
 詳細マイルストーンは Cursor Project Context の **`docs/unity-production-plan.md`** を正本とします。リポジトリ内要約は `Docs/DESIGN_LINKS.md` を参照。

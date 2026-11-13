@@ -39,4 +39,6 @@
 
 ## Unity 制作計画
 
-Project Context: `docs/unity-production-plan.md` — パッケージ、フォルダマップ、週次プロト、**ネットワークはプロト4以降**。
+Project Context: `docs/unity-production-plan.md` — パッケージ、フォルダマップ、週次プロト、**ネットワークは縦スライス後**。
+
+縦スライス実装: `Assets/_Project/Scenes/VerticalSlicePrototype.unity`（裏1チャート＋表インスタントクック、共有仕込み/提供）。

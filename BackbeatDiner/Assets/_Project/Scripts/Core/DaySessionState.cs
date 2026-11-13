@@ -1,0 +1,257 @@
+using System;
+using BackbeatDiner.Rhythm;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace BackbeatDiner.Core
+{
+    /// <summary>
+    /// Shared day-session resource counter for the vertical slice:
+    /// back Perfect/Good → 仕込み (prepUnits); front Instant Cook/serve → 提供.
+    /// Ends after ~32 beats or 30 seconds with a 売上仮点数 overlay.
+    /// </summary>
+    public sealed class DaySessionState : MonoBehaviour
+    {
+        public static readonly Color Gold = new Color(0.7882353f, 0.6352941f, 0.15294118f);
+        public static readonly Color Teal = new Color(0.101960784f, 0.419607843f, 0.419607843f);
+
+        [SerializeField] private int maxBeats = 32;
+        [SerializeField] private float maxSeconds = 30f;
+        [SerializeField] private int perfectPrep = 2;
+        [SerializeField] private int goodPrep = 1;
+
+        private RhythmClock _clock;
+        private HitInput _hitInput;
+        private Text _prepLabel;
+        private Text _serveLabel;
+        private Text _timerLabel;
+        private Text _resultTitle;
+        private Text _resultBody;
+        private GameObject _resultRoot;
+
+        private int _prepUnits;
+        private int _servedCount;
+        private int _salesScore;
+        private float _elapsed;
+        private bool _ended;
+        private bool _running;
+
+        public int PrepUnits => _prepUnits;
+        public int ServedCount => _servedCount;
+        public int SalesScore => _salesScore;
+        public bool IsEnded => _ended;
+        public bool IsRunning => _running && !_ended;
+
+        public event Action OnSessionEnded;
+
+        public void Bind(
+            RhythmClock clock,
+            HitInput hitInput,
+            Text prepLabel,
+            Text serveLabel,
+            Text timerLabel,
+            GameObject resultRoot,
+            Text resultTitle,
+            Text resultBody)
+        {
+            Unhook();
+            _clock = clock;
+            _hitInput = hitInput;
+            _prepLabel = prepLabel;
+            _serveLabel = serveLabel;
+            _timerLabel = timerLabel;
+            _resultRoot = resultRoot;
+            _resultTitle = resultTitle;
+            _resultBody = resultBody;
+
+            if (_hitInput != null)
+            {
+                _hitInput.OnJudged += HandleJudged;
+            }
+
+            if (_clock != null)
+            {
+                _clock.OnBeat += HandleBeat;
+            }
+
+            if (_resultRoot != null)
+            {
+                _resultRoot.SetActive(false);
+            }
+
+            RefreshHud();
+        }
+
+        public void Begin()
+        {
+            _prepUnits = 0;
+            _servedCount = 0;
+            _salesScore = 0;
+            _elapsed = 0f;
+            _ended = false;
+            _running = true;
+            if (_resultRoot != null)
+            {
+                _resultRoot.SetActive(false);
+            }
+
+            if (_hitInput != null)
+            {
+                _hitInput.InputEnabled = true;
+            }
+
+            RefreshHud();
+        }
+
+        private void Update()
+        {
+            if (!_running || _ended)
+            {
+                return;
+            }
+
+            _elapsed += Time.deltaTime;
+            RefreshHud();
+
+            if (_elapsed >= maxSeconds)
+            {
+                EndSession("時間切れ");
+            }
+        }
+
+        public bool TryConsumePrepForServe(float patienceRatio)
+        {
+            if (_ended || !_running || _prepUnits <= 0)
+            {
+                return false;
+            }
+
+            _prepUnits--;
+            _servedCount++;
+            // Base 100 + leftover patience bonus (0–50).
+            var bonus = Mathf.RoundToInt(Mathf.Clamp01(patienceRatio) * 50f);
+            _salesScore += 100 + bonus;
+            RefreshHud();
+            return true;
+        }
+
+        public void AddPrepFromJudgement(HitJudgement judgement)
+        {
+            if (_ended || !_running)
+            {
+                return;
+            }
+
+            if (judgement == HitJudgement.Perfect)
+            {
+                _prepUnits += perfectPrep;
+            }
+            else if (judgement == HitJudgement.Good)
+            {
+                _prepUnits += goodPrep;
+            }
+
+            RefreshHud();
+        }
+
+        private void HandleJudged(HitJudgement judgement, double delta, int combo, int laneScore)
+        {
+            AddPrepFromJudgement(judgement);
+            _ = delta;
+            _ = combo;
+            _ = laneScore;
+        }
+
+        private void HandleBeat(int beatIndex, double scheduledDsp)
+        {
+            _ = scheduledDsp;
+            // BeatIndex after FireBeat has already advanced; fire uses the index being fired.
+            // End when the fired beat reaches maxBeats-1 (0-based → 32nd beat is index 31).
+            if (!_ended && beatIndex + 1 >= maxBeats)
+            {
+                EndSession("チャート終了");
+            }
+        }
+
+        private void EndSession(string reason)
+        {
+            if (_ended)
+            {
+                return;
+            }
+
+            _ended = true;
+            _running = false;
+            if (_clock != null)
+            {
+                _clock.StopClock();
+            }
+
+            if (_hitInput != null)
+            {
+                _hitInput.InputEnabled = false;
+            }
+
+            if (_resultRoot != null)
+            {
+                _resultRoot.SetActive(true);
+            }
+
+            if (_resultTitle != null)
+            {
+                _resultTitle.text = "営業終了";
+            }
+
+            if (_resultBody != null)
+            {
+                _resultBody.text =
+                    $"{reason}\n\n" +
+                    $"売上仮点数: {_salesScore}\n" +
+                    $"提供: {_servedCount}\n" +
+                    $"残仕込み: {_prepUnits}\n" +
+                    $"経過: {_elapsed:0.0}s / ビート上限 {maxBeats}";
+            }
+
+            Debug.Log($"[DaySessionState] End ({reason}) sales={_salesScore} served={_servedCount} prepLeft={_prepUnits}");
+            OnSessionEnded?.Invoke();
+        }
+
+        private void RefreshHud()
+        {
+            if (_prepLabel != null)
+            {
+                _prepLabel.text = $"仕込み: {_prepUnits}";
+            }
+
+            if (_serveLabel != null)
+            {
+                _serveLabel.text = $"提供: {_servedCount}";
+            }
+
+            if (_timerLabel != null)
+            {
+                var remain = Mathf.Max(0f, maxSeconds - _elapsed);
+                var beat = _clock != null ? _clock.BeatIndex : 0;
+                _timerLabel.text = $"残り {remain:0.0}s / ビート {beat}/{maxBeats}";
+            }
+        }
+
+        private void OnDestroy()
+        {
+            Unhook();
+        }
+
+        private void Unhook()
+        {
+            if (_hitInput != null)
+            {
+                _hitInput.OnJudged -= HandleJudged;
+            }
+
+            if (_clock != null)
+            {
+                _clock.OnBeat -= HandleBeat;
+            }
+        }
+    }
+}
