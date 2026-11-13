@@ -18,6 +18,7 @@ namespace BackbeatDiner.Rhythm
         [SerializeField] private Text judgementText;
         [SerializeField] private Text comboText;
         [SerializeField] private Text bpmText;
+        [SerializeField] private HitJudgeFeedback feedback;
         [SerializeField] private bool inputEnabled = true;
         [SerializeField] private bool localTwoPlayerSplit;
 
@@ -55,7 +56,9 @@ namespace BackbeatDiner.Rhythm
             Text judgement,
             Text combo,
             Text bpm,
-            bool twoPlayerSplit = false)
+            bool twoPlayerSplit = false,
+            HitJudgeFeedback judgeFeedback = null,
+            Transform feedbackHudRoot = null)
         {
             clock = rhythmClock;
             highway = noteHighway;
@@ -63,6 +66,16 @@ namespace BackbeatDiner.Rhythm
             comboText = combo;
             bpmText = bpm;
             localTwoPlayerSplit = twoPlayerSplit;
+            BindFeedback(judgeFeedback, feedbackHudRoot);
+        }
+
+        public void BindFeedback(HitJudgeFeedback judgeFeedback = null, Transform feedbackHudRoot = null)
+        {
+            feedback = judgeFeedback != null
+                ? judgeFeedback
+                : gameObject.GetComponent<HitJudgeFeedback>() ?? gameObject.AddComponent<HitJudgeFeedback>();
+            var audio = gameObject.GetComponent<AudioSource>();
+            feedback.Configure(judgementText, audio, feedbackHudRoot);
         }
 
         private void Update()
@@ -143,10 +156,13 @@ namespace BackbeatDiner.Rhythm
 
             var msg = $"[HitInput] {judgement} Δ={delta * 1000.0:F1}ms combo={_combo} score={_score}";
             Debug.Log(msg);
-            if (judgementText != null)
+
+            if (feedback == null)
             {
-                judgementText.text = $"判定: {ToJapanese(judgement)} ({delta * 1000.0:F0}ms)";
+                BindFeedback();
             }
+
+            feedback.Play(judgement, delta, _combo);
 
             OnJudged?.Invoke(judgement, delta, _combo, _score);
         }
@@ -164,11 +180,5 @@ namespace BackbeatDiner.Rhythm
             }
         }
 
-        private static string ToJapanese(HitJudgement j) => j switch
-        {
-            HitJudgement.Perfect => "Perfect",
-            HitJudgement.Good => "Good",
-            _ => "Miss"
-        };
     }
 }

@@ -11,6 +11,7 @@ Week 1 vertical slice:
 | `JudgeWindow` | Perfect ±40ms / Good ±80ms |
 | `NoteHighway` | Chart-driven (or every-beat fallback) scrolling notes toward hit line |
 | `HitInput` | Space / gamepad South → judge + HUD |
+| `HitJudgeFeedback` | Back-lane Perfect/Good/Miss JP popup (パーフェクト/グッド/ミス) + procedural SFX; syncs Cooking-sim `JudgementLabel` |
 | `RhythmPrototypeBootstrap` | Loads `Chart_DemoA`, builds kitchen placeholders + wires systems |
 
 Open `Assets/_Project/Scenes/RhythmPrototype.unity` (menu **BACKBEAT DINER → Build Rhythm Prototype Scene** if missing).

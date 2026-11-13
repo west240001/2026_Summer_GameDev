@@ -318,12 +318,7 @@ namespace BackbeatDiner.Front
             meterFill.color = color;
         }
 
-        private static string ToJapanese(HitJudgement j) => j switch
-        {
-            HitJudgement.Perfect => "Perfect",
-            HitJudgement.Good => "Good",
-            _ => "Miss"
-        };
+        private static string ToJapanese(HitJudgement j) => HitJudgeFeedback.ToJapanese(j);
 
         private void OnDisable()
         {

@@ -769,15 +769,16 @@ namespace BackbeatDiner.Net
                 return;
             }
 
-            var name = judgement switch
-            {
-                HitJudgement.Perfect => "Perfect",
-                HitJudgement.Good => "Good",
-                _ => "Miss"
-            };
+            var name = HitJudgeFeedback.ToJapanese(judgement);
             _judgementLabel.text = combo > 0
                 ? $"相手判定: {name} ({deltaMs:0}ms) c{combo}"
                 : $"相手配膳: {name}";
+            _judgementLabel.color = judgement switch
+            {
+                HitJudgement.Perfect => new Color(0.93f, 0.78f, 0.32f, 1f),
+                HitJudgement.Good => new Color(0.55f, 0.92f, 0.88f, 1f),
+                _ => new Color(0.92f, 0.42f, 0.38f, 1f)
+            };
         }
 
         private void RefreshStatusLabel()

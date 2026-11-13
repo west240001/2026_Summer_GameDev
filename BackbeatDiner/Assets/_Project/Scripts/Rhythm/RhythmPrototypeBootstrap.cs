@@ -63,7 +63,9 @@ namespace BackbeatDiner.Rhythm
             highway.Configure(clock, spawn, hit, chart);
 
             var hud = EnsureHud(out var judgement, out var combo, out var bpmLabel);
-            hitInput.Configure(clock, highway, judgement, combo, bpmLabel);
+            var hitFeedback = systems.AddComponent<HitJudgeFeedback>();
+            hitInput.Configure(clock, highway, judgement, combo, bpmLabel,
+                twoPlayerSplit: false, hitFeedback, hud != null ? hud.transform : null);
             hitInput.Window = JudgeWindow.Default;
             // 裏役: Beat-B1..B4（プッシュ/クリア/スナップ前/あとで）
             beatLexicon.Configure(BeatRole.Back, createPadUi: true);
