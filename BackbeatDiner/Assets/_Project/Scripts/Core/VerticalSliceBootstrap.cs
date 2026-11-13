@@ -7,19 +7,24 @@ using UnityEngine.UI;
 namespace BackbeatDiner.Core
 {
     /// <summary>
-    /// Vertical slice: left = back rhythm chart, right = front mini diner.
+    /// Vertical slice: left = back rhythm station, right = front low-poly diner.
     /// Shared <see cref="DaySessionState"/> links Perfect/Good → 仕込み and Instant Cook → F1+ 配膳リズム → 提供.
     /// </summary>
     public sealed class VerticalSliceBootstrap : MonoBehaviour
     {
         private static readonly Color Gold = DaySessionState.Gold;
         private static readonly Color Teal = DaySessionState.Teal;
+        private static readonly Color Navy = new Color(0.05490196f, 0.12156863f, 0.2f, 1f);
+        private static readonly Color Cream = new Color(0.92f, 0.88f, 0.78f, 1f);
+        private static readonly Color WarmWood = new Color(0.35f, 0.22f, 0.12f, 1f);
+        private static readonly Color SoftWhite = new Color(0.95f, 0.93f, 0.88f, 1f);
 
         [SerializeField] private AudioClip metronomeClick;
         [SerializeField] private float bpm = 120f;
         [SerializeField] private bool buildPlaceholders = true;
         [SerializeField] private Material goldMaterial;
         [SerializeField] private Material tealMaterial;
+        [SerializeField] private Material navyMaterial;
         [SerializeField] private int customerCount = 2;
 
         private void Start()
@@ -30,7 +35,7 @@ namespace BackbeatDiner.Core
                 BuildWorlds();
             }
 
-            EnsureLights();
+            EnsureLightsAndFog();
             var backCam = EnsureBackCamera();
             var frontCam = EnsureFrontCamera();
             _ = backCam;
@@ -76,16 +81,19 @@ namespace BackbeatDiner.Core
 
             queue.Configure(queueRoot, tealMaterial, goldMaterial, Mathf.Clamp(customerCount, 1, 3));
 
-            BuildHud(out var judgement, out var combo, out var bpmLabel,
+            BuildHud(
+                out var judgement, out var combo, out var bpmLabel,
                 out var prep, out var serve, out var timer, out var cookFeedback,
-                out var invRow, out var resultRoot, out var resultTitle, out var resultBody);
+                out var invRow, out var resultRoot, out var resultTitle, out var resultBody,
+                out var sessionFill, out var prepFill, out var serveFill, out var serveMeter);
 
             inventory.BuildUi(invRow);
             // Local 2P: Back WASD+Space hits stay live during Front serve (J·K).
             hitInput.Configure(clock, highway, judgement, combo, bpmLabel, twoPlayerSplit: true);
             hitInput.Window = JudgeWindow.Default;
-            session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody);
-            serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true);
+            session.Bind(clock, hitInput, prep, serve, timer, resultRoot, resultTitle, resultBody,
+                sessionFill, prepFill, serveFill);
+            serveRhythm.Configure(clock, session, hitInput, cook, cookFeedback, twoPlayerSplit: true, serveMeter);
             cook.Configure(session, queue, cookFeedback, serveRhythm, twoPlayerSplit: true);
             // 裏: A/S/D/F = Beat-B1..B4　表: ←↓→↑ = Beat-F1..F4（配膳中は表のみロック）
             backBeats.Configure(BeatRole.Back, createPadUi: true, padKeys: BeatPadKeyScheme.BackAsdf);
@@ -93,19 +101,24 @@ namespace BackbeatDiner.Core
 
             session.Begin();
             clock.StartClock(0.35);
-            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — local 2P: Back WASD+Space hit / A·S·D·F=B1..B4; Front Enter cook / J·K serve / arrows=F1..F4; ~32拍 or 30s.");
+            Debug.Log("[BACKBEAT DINER] VerticalSlicePrototype ready — polished diner 3D + HUD; local 2P.");
         }
 
         private void ResolveMaterials()
         {
             if (goldMaterial == null)
             {
-                goldMaterial = CreateRuntimeMat(Gold);
+                goldMaterial = CreateRuntimeMat(Gold, lit: true);
             }
 
             if (tealMaterial == null)
             {
-                tealMaterial = CreateRuntimeMat(Teal);
+                tealMaterial = CreateRuntimeMat(Teal, lit: true);
+            }
+
+            if (navyMaterial == null)
+            {
+                navyMaterial = CreateRuntimeMat(Navy, lit: true);
             }
         }
 
@@ -116,27 +129,156 @@ namespace BackbeatDiner.Core
                 return;
             }
 
+            BuildBackRhythmStation();
+            BuildFrontDinerRoom();
+            CreateLaneAnchors(out _, out _);
+        }
+
+        private void BuildBackRhythmStation()
+        {
             var back = new GameObject("BackKitchenRoot");
             back.transform.position = new Vector3(-6f, 0f, 0f);
-            CreateCube("Floor", back.transform, new Vector3(0f, -0.05f, 0f), new Vector3(8f, 0.1f, 6f), Teal * 0.55f);
-            CreateCube("KitchenCounter", back.transform, new Vector3(0f, 0.45f, 0.2f), new Vector3(3.2f, 0.9f, 1.1f), Teal);
-            CreateCube("HitPad", back.transform, new Vector3(0f, 0.95f, -0.15f), new Vector3(0.7f, 0.12f, 0.7f), Gold);
-            CreateCube("BackSplash", back.transform, new Vector3(0f, 1.4f, 0.7f), new Vector3(3.2f, 1.2f, 0.12f), Teal * 1.15f);
-            CreateLaneAnchors(out _, out _);
 
+            // Checker floor tiles
+            BuildFloorTiles(back.transform, 8, 6, 0.95f, Teal * 0.45f, Navy * 1.1f);
+
+            CreatePrim(PrimitiveType.Cube, "BackWall", back.transform, new Vector3(0f, 1.6f, 2.8f), new Vector3(8f, 3.2f, 0.18f), Navy);
+            CreatePrim(PrimitiveType.Cube, "SideWallL", back.transform, new Vector3(-3.9f, 1.6f, 0.4f), new Vector3(0.18f, 3.2f, 5.2f), Navy * 1.05f);
+            CreatePrim(PrimitiveType.Cube, "SideWallR", back.transform, new Vector3(3.9f, 1.6f, 0.4f), new Vector3(0.18f, 3.2f, 5.2f), Navy * 1.05f);
+
+            // Main prep counter + pass shelf
+            CreatePrim(PrimitiveType.Cube, "KitchenCounter", back.transform, new Vector3(0f, 0.45f, 0.35f), new Vector3(3.6f, 0.9f, 1.2f), Teal);
+            CreatePrim(PrimitiveType.Cube, "CounterTop", back.transform, new Vector3(0f, 0.92f, 0.35f), new Vector3(3.7f, 0.08f, 1.28f), SoftWhite);
+            CreatePrim(PrimitiveType.Cube, "PassShelf", back.transform, new Vector3(0f, 1.55f, 0.85f), new Vector3(2.4f, 0.08f, 0.55f), WarmWood);
+            CreatePrim(PrimitiveType.Cube, "PassWall", back.transform, new Vector3(0f, 1.35f, 1.15f), new Vector3(2.8f, 1.4f, 0.12f), Teal * 1.15f);
+            CreatePrim(PrimitiveType.Cube, "PassWindow", back.transform, new Vector3(0f, 1.45f, 1.08f), new Vector3(1.5f, 0.7f, 0.08f), Gold);
+
+            // Rhythm pads row (A S D F visual)
+            var padColors = new[] { Gold, Teal, Gold * 0.85f, Teal * 1.2f };
+            var padLabels = new[] { "A", "S", "D", "F" };
+            for (var i = 0; i < 4; i++)
+            {
+                var x = -1.35f + i * 0.9f;
+                CreatePrim(PrimitiveType.Cube, $"BeatPad_{padLabels[i]}", back.transform,
+                    new Vector3(x, 1.02f, -0.05f), new Vector3(0.62f, 0.1f, 0.62f), padColors[i]);
+                CreatePrim(PrimitiveType.Cylinder, $"PadStem_{padLabels[i]}", back.transform,
+                    new Vector3(x, 0.96f, -0.05f), new Vector3(0.18f, 0.04f, 0.18f), Navy);
+            }
+
+            CreatePrim(PrimitiveType.Cube, "HitPad", back.transform, new Vector3(0f, 0.98f, -0.85f), new Vector3(1.1f, 0.12f, 0.45f), Gold);
+            CreatePrim(PrimitiveType.Cube, "LaneRailL", back.transform, new Vector3(-0.85f, 1.05f, 1.2f), new Vector3(0.08f, 0.06f, 3.6f), Teal * 0.8f);
+            CreatePrim(PrimitiveType.Cube, "LaneRailR", back.transform, new Vector3(0.85f, 1.05f, 1.2f), new Vector3(0.08f, 0.06f, 3.6f), Teal * 0.8f);
+            CreatePrim(PrimitiveType.Quad, "LaneDeck", back.transform, new Vector3(0f, 1.01f, 1.2f), new Vector3(1.55f, 3.5f, 1f), Navy * 1.25f);
+            var deck = back.transform.Find("LaneDeck");
+            if (deck != null)
+            {
+                deck.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+
+            CreatePendantLamp(back.transform, new Vector3(-1.6f, 2.55f, 0.2f), "BackLampL");
+            CreatePendantLamp(back.transform, new Vector3(1.6f, 2.55f, 0.2f), "BackLampR");
+        }
+
+        private void BuildFrontDinerRoom()
+        {
             var front = new GameObject("FrontDinerRoot");
             front.transform.position = new Vector3(6f, 0f, 0f);
-            CreateCube("DinerFloor", front.transform, new Vector3(0f, -0.05f, 1.2f), new Vector3(7f, 0.1f, 5f), Teal * 0.55f);
-            CreateCube("ServiceCounter", front.transform, new Vector3(0f, 0.45f, -0.4f), new Vector3(3.6f, 0.9f, 0.9f), Teal);
-            CreateCube("PassWindow", front.transform, new Vector3(0f, 1.35f, -0.85f), new Vector3(1.6f, 0.7f, 0.12f), Gold);
-            CreateCube("BackWall", front.transform, new Vector3(0f, 1.5f, 3.2f), new Vector3(7f, 3f, 0.15f), Teal * 1.1f);
+
+            BuildFloorTiles(front.transform, 7, 5, 0.95f, Cream * 0.85f, Teal * 0.35f);
+
+            CreatePrim(PrimitiveType.Cube, "BackWall", front.transform, new Vector3(0f, 1.7f, 3.35f), new Vector3(7.4f, 3.4f, 0.16f), Navy);
+            CreatePrim(PrimitiveType.Cube, "SideWallL", front.transform, new Vector3(-3.6f, 1.7f, 1.0f), new Vector3(0.16f, 3.4f, 5.0f), Navy * 1.08f);
+            CreatePrim(PrimitiveType.Cube, "SideWallR", front.transform, new Vector3(3.6f, 1.7f, 1.0f), new Vector3(0.16f, 3.4f, 5.0f), Navy * 1.08f);
+            CreatePrim(PrimitiveType.Cube, "CeilingTrim", front.transform, new Vector3(0f, 3.25f, 1.0f), new Vector3(7.2f, 0.12f, 4.8f), Teal * 0.7f);
+
+            // Kitchen pass wall separating back/front feel on the right stage
+            CreatePrim(PrimitiveType.Cube, "KitchenPassWall", front.transform, new Vector3(0f, 1.5f, -1.15f), new Vector3(4.2f, 3f, 0.2f), Teal);
+            CreatePrim(PrimitiveType.Cube, "PassWindow", front.transform, new Vector3(0f, 1.45f, -1.05f), new Vector3(1.8f, 0.85f, 0.1f), Gold);
+            CreatePrim(PrimitiveType.Cube, "ServiceCounter", front.transform, new Vector3(0f, 0.45f, -0.35f), new Vector3(3.8f, 0.9f, 0.95f), Teal);
+            CreatePrim(PrimitiveType.Cube, "ServiceTop", front.transform, new Vector3(0f, 0.92f, -0.35f), new Vector3(3.9f, 0.08f, 1.05f), SoftWhite);
+            CreatePrim(PrimitiveType.Cube, "MenuBoard", front.transform, new Vector3(0f, 2.35f, -1.05f), new Vector3(2.2f, 0.55f, 0.08f), Navy);
+            CreatePrim(PrimitiveType.Cube, "MenuAccent", front.transform, new Vector3(0f, 2.35f, -1.0f), new Vector3(1.9f, 0.08f, 0.04f), Gold);
+
+            // Booths + tables
+            BuildBooth(front.transform, new Vector3(-2.2f, 0f, 1.6f), "BoothL");
+            BuildBooth(front.transform, new Vector3(2.2f, 0f, 1.6f), "BoothR");
+            BuildTableSet(front.transform, new Vector3(-2.2f, 0f, 0.35f), "TableL");
+            BuildTableSet(front.transform, new Vector3(2.2f, 0f, 0.35f), "TableR");
+            BuildTableSet(front.transform, new Vector3(0f, 0f, 2.1f), "TableC");
+
+            CreatePendantLamp(front.transform, new Vector3(-2.2f, 2.7f, 1.1f), "FrontLampL");
+            CreatePendantLamp(front.transform, new Vector3(2.2f, 2.7f, 1.1f), "FrontLampR");
+            CreatePendantLamp(front.transform, new Vector3(0f, 2.85f, 0.2f), "FrontLampC");
+
+            // Brand sign above pass
+            CreatePrim(PrimitiveType.Cube, "LogoSign", front.transform, new Vector3(0f, 2.85f, 3.2f), new Vector3(3.2f, 0.55f, 0.1f), Navy);
+            CreatePrim(PrimitiveType.Cube, "LogoBar", front.transform, new Vector3(0f, 2.55f, 3.15f), new Vector3(2.6f, 0.06f, 0.06f), Gold);
 
             if (GameObject.Find("CustomerQueueRoot") == null)
             {
                 var q = new GameObject("CustomerQueueRoot");
                 q.transform.SetParent(front.transform, false);
-                q.transform.localPosition = Vector3.zero;
+                q.transform.localPosition = new Vector3(0f, 0f, 0.9f);
             }
+        }
+
+        private void BuildFloorTiles(Transform parent, int cols, int rows, float size, Color a, Color b)
+        {
+            var root = new GameObject("FloorTiles");
+            root.transform.SetParent(parent, false);
+            var originX = -(cols - 1) * size * 0.5f;
+            var originZ = -(rows - 1) * size * 0.5f + 0.8f;
+            for (var z = 0; z < rows; z++)
+            {
+                for (var x = 0; x < cols; x++)
+                {
+                    var color = ((x + z) & 1) == 0 ? a : b;
+                    CreatePrim(PrimitiveType.Cube, $"Tile_{x}_{z}", root.transform,
+                        new Vector3(originX + x * size, -0.05f, originZ + z * size),
+                        new Vector3(size * 0.96f, 0.08f, size * 0.96f),
+                        color);
+                }
+            }
+        }
+
+        private void BuildBooth(Transform parent, Vector3 localPos, string name)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = localPos;
+            CreatePrim(PrimitiveType.Cube, "Seat", root.transform, new Vector3(0f, 0.28f, 0f), new Vector3(1.5f, 0.35f, 0.7f), Teal);
+            CreatePrim(PrimitiveType.Cube, "Backrest", root.transform, new Vector3(0f, 0.7f, 0.32f), new Vector3(1.5f, 0.85f, 0.18f), Teal * 1.15f);
+            CreatePrim(PrimitiveType.Cube, "Cushion", root.transform, new Vector3(0f, 0.48f, -0.05f), new Vector3(1.35f, 0.1f, 0.55f), Gold * 0.75f);
+        }
+
+        private void BuildTableSet(Transform parent, Vector3 localPos, string name)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = localPos;
+            CreatePrim(PrimitiveType.Cylinder, "Leg", root.transform, new Vector3(0f, 0.35f, 0f), new Vector3(0.18f, 0.35f, 0.18f), WarmWood);
+            CreatePrim(PrimitiveType.Cylinder, "Top", root.transform, new Vector3(0f, 0.72f, 0f), new Vector3(1.05f, 0.05f, 1.05f), WarmWood * 1.15f);
+            CreatePrim(PrimitiveType.Cylinder, "Plate", root.transform, new Vector3(0.15f, 0.8f, 0.1f), new Vector3(0.22f, 0.02f, 0.22f), SoftWhite);
+            CreatePrim(PrimitiveType.Cube, "Cup", root.transform, new Vector3(-0.2f, 0.82f, -0.1f), new Vector3(0.1f, 0.12f, 0.1f), Gold);
+        }
+
+        private void CreatePendantLamp(Transform parent, Vector3 localPos, string name)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = localPos;
+            CreatePrim(PrimitiveType.Cylinder, "Cord", root.transform, new Vector3(0f, 0.25f, 0f), new Vector3(0.04f, 0.25f, 0.04f), Navy);
+            CreatePrim(PrimitiveType.Sphere, "Shade", root.transform, new Vector3(0f, 0f, 0f), new Vector3(0.45f, 0.28f, 0.45f), Gold);
+            CreatePrim(PrimitiveType.Sphere, "Bulb", root.transform, new Vector3(0f, -0.12f, 0f), new Vector3(0.16f, 0.16f, 0.16f), SoftWhite);
+
+            var lightGo = new GameObject("PointLight");
+            lightGo.transform.SetParent(root.transform, false);
+            lightGo.transform.localPosition = new Vector3(0f, -0.2f, 0f);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.9f, 0.7f);
+            light.intensity = 1.35f;
+            light.range = 4.5f;
         }
 
         private static void CreateLaneAnchors(out Transform spawn, out Transform hit)
@@ -154,10 +296,17 @@ namespace BackbeatDiner.Core
             var origin = back != null ? back.transform.position : new Vector3(-6f, 0f, 0f);
 
             var spawnGo = new GameObject("NoteSpawn");
-            spawnGo.transform.position = origin + new Vector3(0f, 1.2f, 3.2f);
+            spawnGo.transform.position = origin + new Vector3(0f, 1.15f, 3.0f);
             var hitGo = new GameObject("HitLine");
-            hitGo.transform.position = origin + new Vector3(0f, 1.0f, -0.15f);
-            CreateCube("HitLineVisual", hitGo.transform, Vector3.zero, new Vector3(1.4f, 0.05f, 0.08f), Gold);
+            hitGo.transform.position = origin + new Vector3(0f, 1.05f, -0.85f);
+            CreatePrimStatic(PrimitiveType.Cube, "HitLineVisual", hitGo.transform, Vector3.zero, new Vector3(1.5f, 0.06f, 0.1f), Gold);
+            CreatePrimStatic(PrimitiveType.Quad, "HitGlow", hitGo.transform, new Vector3(0f, 0.02f, 0f), new Vector3(1.7f, 0.35f, 1f),
+                new Color(Gold.r, Gold.g, Gold.b, 0.35f));
+            var glow = hitGo.transform.Find("HitGlow");
+            if (glow != null)
+            {
+                glow.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
 
             spawn = spawnGo.transform;
             hit = hitGo.transform;
@@ -177,14 +326,15 @@ namespace BackbeatDiner.Core
                 cam = go.GetComponent<Camera>() ?? go.AddComponent<Camera>();
             }
 
-            // Not MainCamera — front owns customer HUD projection.
             go.tag = "Untagged";
-            cam.transform.position = new Vector3(-6f, 2.4f, -4.2f);
+            cam.transform.position = new Vector3(-6f, 2.55f, -4.4f);
             cam.transform.rotation = Quaternion.Euler(18f, 0f, 0f);
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.05f, 0.12f, 0.12f);
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.backgroundColor = Navy;
             cam.depth = 0;
             cam.rect = new Rect(0f, 0f, 0.5f, 1f);
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 60f;
             if (go.GetComponent<AudioListener>() == null)
             {
                 go.AddComponent<AudioListener>();
@@ -195,7 +345,6 @@ namespace BackbeatDiner.Core
 
         private static Camera EnsureFrontCamera()
         {
-            // Retarget Main Camera if present; otherwise create FrontCamera as MainCamera.
             Camera cam;
             if (Camera.main != null)
             {
@@ -218,35 +367,61 @@ namespace BackbeatDiner.Core
                 }
             }
 
-            // Strip duplicate listener — BackCamera owns audio.
             var listener = cam.GetComponent<AudioListener>();
             if (listener != null)
             {
                 Object.Destroy(listener);
             }
 
-            cam.transform.position = new Vector3(6f, 3.1f, -5.2f);
-            cam.transform.rotation = Quaternion.Euler(22f, 0f, 0f);
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.04f, 0.1f, 0.1f);
+            cam.transform.position = new Vector3(6f, 3.25f, -5.4f);
+            cam.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.backgroundColor = Navy;
             cam.depth = 1;
             cam.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 60f;
             return cam;
         }
 
-        private static void EnsureLights()
+        private static void EnsureLightsAndFog()
         {
-            if (Object.FindFirstObjectByType<Light>() != null)
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.06f, 0.12f, 0.16f, 1f);
+            RenderSettings.fogDensity = 0.028f;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.18f, 0.24f, 0.28f);
+
+            var existing = Object.FindFirstObjectByType<Light>();
+            Light key;
+            if (existing != null && existing.type == LightType.Directional)
             {
-                return;
+                key = existing;
+            }
+            else
+            {
+                var lightGo = new GameObject("KeyLight");
+                key = lightGo.AddComponent<Light>();
+                key.type = LightType.Directional;
             }
 
-            var lightGo = new GameObject("Directional Light");
-            var light = lightGo.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.color = new Color(1f, 0.95f, 0.85f);
-            light.intensity = 1.15f;
-            lightGo.transform.rotation = Quaternion.Euler(48f, -25f, 0f);
+            key.name = "KeyLight";
+            key.color = new Color(1f, 0.94f, 0.84f);
+            key.intensity = 0.95f;
+            key.shadows = LightShadows.Soft;
+            key.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
+
+            if (GameObject.Find("FillLight") == null)
+            {
+                var fillGo = new GameObject("FillLight");
+                var fill = fillGo.AddComponent<Light>();
+                fill.type = LightType.Directional;
+                fill.color = new Color(0.45f, 0.7f, 0.75f);
+                fill.intensity = 0.35f;
+                fill.shadows = LightShadows.None;
+                fillGo.transform.rotation = Quaternion.Euler(25f, 140f, 0f);
+            }
         }
 
         private static void BuildHud(
@@ -260,7 +435,11 @@ namespace BackbeatDiner.Core
             out RectTransform invRow,
             out GameObject resultRoot,
             out Text resultTitle,
-            out Text resultBody)
+            out Text resultBody,
+            out Image sessionFill,
+            out Image prepFill,
+            out Image serveFill,
+            out Image serveMeter)
         {
             var canvasGo = GameObject.Find("VerticalSliceHUD");
             if (canvasGo == null)
@@ -275,39 +454,65 @@ namespace BackbeatDiner.Core
                 canvasGo.AddComponent<GraphicRaycaster>();
             }
 
-            // Divider
-            EnsurePanel(canvasGo.transform, "SplitDivider", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4f, 1080f), new Color(0.788f, 0.635f, 0.153f, 0.55f));
+            // Center brand logo
+            var logo = EnsureLabel(canvasGo.transform, "BrandLogo", "BACKBEAT DINER", new Vector2(0f, -10f),
+                TextAnchor.UpperCenter, 30, Gold);
+            logo.fontStyle = FontStyle.Bold;
+            logo.rectTransform.sizeDelta = new Vector2(640f, 40f);
+            EnsureLabel(canvasGo.transform, "BrandSub", "バックビート・ダイナー", new Vector2(0f, -42f),
+                TextAnchor.UpperCenter, 14, Teal).rectTransform.sizeDelta = new Vector2(480f, 24f);
 
-            EnsureLabel(canvasGo.transform, "BackTitle", "裏 · キッチン", new Vector2(24f, -18f), TextAnchor.UpperLeft, 22, Gold);
-            EnsureLabel(canvasGo.transform, "FrontTitle", "表 · ダイナー", new Vector2(-24f, -18f), TextAnchor.UpperRight, 22, Gold);
+            EnsurePanel(canvasGo.transform, "SplitDivider", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(5f, 0f), new Color(Gold.r, Gold.g, Gold.b, 0.65f));
 
-            judgement = EnsureLabel(canvasGo.transform, "JudgementLabel", "判定: —", new Vector2(24f, -56f), TextAnchor.UpperLeft, 26, Gold);
-            combo = EnsureLabel(canvasGo.transform, "ComboLabel", "コンボ: 0", new Vector2(24f, -96f), TextAnchor.UpperLeft, 22, Gold);
-            bpmLabel = EnsureLabel(canvasGo.transform, "BpmLabel", "BPM: 120", new Vector2(24f, -132f), TextAnchor.UpperLeft, 20, Teal);
+            // Left / right chrome panels
+            EnsurePanel(canvasGo.transform, "BackPanel", new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(0f, 1f), new Vector2(16f, -70f), new Vector2(430f, 210f), new Color(0.03f, 0.07f, 0.1f, 0.72f));
+            EnsurePanel(canvasGo.transform, "FrontPanel", new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(1f, 1f), new Vector2(-16f, -70f), new Vector2(450f, 250f), new Color(0.03f, 0.07f, 0.1f, 0.72f));
+            EnsurePanel(canvasGo.transform, "SessionPanel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(420f, 86f), new Color(0.03f, 0.07f, 0.1f, 0.75f));
+
+            EnsureLabel(canvasGo.transform, "BackTitle", "裏 · リズムステーション", new Vector2(28f, -78f), TextAnchor.UpperLeft, 20, Gold);
+            EnsureLabel(canvasGo.transform, "FrontTitle", "表 · ダイナーフロア", new Vector2(-28f, -78f), TextAnchor.UpperRight, 20, Gold);
+
+            judgement = EnsureLabel(canvasGo.transform, "JudgementLabel", "判定: —", new Vector2(28f, -112f), TextAnchor.UpperLeft, 24, Gold);
+            combo = EnsureLabel(canvasGo.transform, "ComboLabel", "コンボ: 0", new Vector2(28f, -148f), TextAnchor.UpperLeft, 20, Gold);
+            bpmLabel = EnsureLabel(canvasGo.transform, "BpmLabel", "BPM: 120", new Vector2(28f, -180f), TextAnchor.UpperLeft, 18, Teal);
             SetLabelText(EnsureLabel(canvasGo.transform, "BackControlsHint", LocalTwoPlayerBindings.HudBackHint,
-                new Vector2(24f, -168f), TextAnchor.UpperLeft, 15, Teal), LocalTwoPlayerBindings.HudBackHint);
+                new Vector2(28f, -212f), TextAnchor.UpperLeft, 14, Teal), LocalTwoPlayerBindings.HudBackHint);
 
-            prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-24f, -56f), TextAnchor.UpperRight, 28, Gold);
-            serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-24f, -100f), TextAnchor.UpperRight, 28, Teal);
-            timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -18f), TextAnchor.UpperCenter, 22, Gold);
+            prep = EnsureLabel(canvasGo.transform, "PrepLabel", "仕込み: 0", new Vector2(-28f, -112f), TextAnchor.UpperRight, 24, Gold);
+            serve = EnsureLabel(canvasGo.transform, "ServeLabel", "提供: 0", new Vector2(-28f, -146f), TextAnchor.UpperRight, 24, Teal);
+            timer = EnsureLabel(canvasGo.transform, "TimerLabel", "残り 30.0s / ビート 0/32", new Vector2(0f, -78f), TextAnchor.UpperCenter, 18, Gold);
             cookFeedback = EnsureLabel(canvasGo.transform, "CookFeedback", LocalTwoPlayerBindings.HudFrontCookHint,
-                new Vector2(-24f, -150f), TextAnchor.UpperRight, 18, Gold);
+                new Vector2(-28f, -210f), TextAnchor.UpperRight, 15, Gold);
             SetLabelText(cookFeedback, LocalTwoPlayerBindings.HudFrontCookHint);
 
             SetLabelText(EnsureLabel(canvasGo.transform, "ServeRhythmHint",
                 LocalTwoPlayerBindings.HudFrontServeHint,
-                new Vector2(-24f, -186f), TextAnchor.UpperRight, 16, Teal), LocalTwoPlayerBindings.HudFrontServeHint);
+                new Vector2(-28f, -238f), TextAnchor.UpperRight, 14, Teal), LocalTwoPlayerBindings.HudFrontServeHint);
 
             SetLabelText(EnsureLabel(canvasGo.transform, "FrontBeatHint",
                 LocalTwoPlayerBindings.HudFrontBeatHint,
-                new Vector2(-24f, -218f), TextAnchor.UpperRight, 15, Gold), LocalTwoPlayerBindings.HudFrontBeatHint);
+                new Vector2(-28f, -264f), TextAnchor.UpperRight, 13, Gold), LocalTwoPlayerBindings.HudFrontBeatHint);
 
-            var help = EnsureLabel(canvasGo.transform, "HelpLabel",
+            sessionFill = EnsureBar(canvasGo.transform, "SessionBar", new Vector2(0f, -112f), TextAnchor.UpperCenter, Teal, 360f);
+            prepFill = EnsureBar(canvasGo.transform, "PrepBar", new Vector2(-28f, -178f), TextAnchor.UpperRight, Gold, 240f);
+            serveFill = EnsureBar(canvasGo.transform, "ServeBar", new Vector2(-28f, -198f), TextAnchor.UpperRight, Teal, 240f);
+            serveMeter = EnsureBar(canvasGo.transform, "ServeRhythmMeter", new Vector2(-28f, -292f), TextAnchor.UpperRight, Gold, 280f);
+            serveMeter.fillAmount = 0f;
+
+            var helpPanel = EnsurePanel(canvasGo.transform, "HelpPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1760f, 52f), new Color(0.03f, 0.07f, 0.1f, 0.8f));
+            var help = EnsureLabel(helpPanel.transform, "HelpLabel",
                 LocalTwoPlayerBindings.HudHelp,
-                new Vector2(0f, 28f), TextAnchor.LowerCenter, 15, Gold);
+                new Vector2(0f, 0f), TextAnchor.MiddleCenter, 14, Gold);
             SetLabelText(help, LocalTwoPlayerBindings.HudHelp);
-            help.rectTransform.sizeDelta = new Vector2(1800f, 48f);
+            help.rectTransform.anchorMin = Vector2.zero;
+            help.rectTransform.anchorMax = Vector2.one;
+            help.rectTransform.offsetMin = new Vector2(12f, 4f);
+            help.rectTransform.offsetMax = new Vector2(-12f, -4f);
 
             var rowGo = canvasGo.transform.Find("InventoryRow");
             if (rowGo == null)
@@ -315,10 +520,10 @@ namespace BackbeatDiner.Core
                 var go = new GameObject("InventoryRow");
                 go.transform.SetParent(canvasGo.transform, false);
                 invRow = go.AddComponent<RectTransform>();
-                invRow.anchorMin = new Vector2(0.75f, 1f);
-                invRow.anchorMax = new Vector2(0.75f, 1f);
+                invRow.anchorMin = new Vector2(0.78f, 1f);
+                invRow.anchorMax = new Vector2(0.78f, 1f);
                 invRow.pivot = new Vector2(0.5f, 1f);
-                invRow.anchoredPosition = new Vector2(0f, -252f);
+                invRow.anchoredPosition = new Vector2(0f, -320f);
                 invRow.sizeDelta = new Vector2(560f, 72f);
             }
             else
@@ -330,7 +535,7 @@ namespace BackbeatDiner.Core
             if (resultRoot == null)
             {
                 resultRoot = EnsurePanel(canvasGo.transform, "ResultOverlay", new Vector2(0f, 0f), new Vector2(1f, 1f),
-                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.06f, 0.06f, 0.88f));
+                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.02f, 0.05f, 0.08f, 0.9f));
                 var rt = resultRoot.GetComponent<RectTransform>();
                 rt.offsetMin = Vector2.zero;
                 rt.offsetMax = Vector2.zero;
@@ -377,6 +582,61 @@ namespace BackbeatDiner.Core
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = size;
             return go;
+        }
+
+        private static Image EnsureBar(Transform parent, string name, Vector2 anchoredPos, TextAnchor corner, Color color, float width)
+        {
+            var existing = parent.Find(name);
+            if (existing != null)
+            {
+                var fillExisting = existing.Find("Fill");
+                if (fillExisting != null)
+                {
+                    return fillExisting.GetComponent<Image>();
+                }
+            }
+
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var bg = go.AddComponent<Image>();
+            bg.color = new Color(0.05f, 0.1f, 0.12f, 0.85f);
+            var rt = bg.rectTransform;
+            switch (corner)
+            {
+                case TextAnchor.UpperRight:
+                    rt.anchorMin = new Vector2(1f, 1f);
+                    rt.anchorMax = new Vector2(1f, 1f);
+                    rt.pivot = new Vector2(1f, 1f);
+                    break;
+                case TextAnchor.UpperCenter:
+                    rt.anchorMin = new Vector2(0.5f, 1f);
+                    rt.anchorMax = new Vector2(0.5f, 1f);
+                    rt.pivot = new Vector2(0.5f, 1f);
+                    break;
+                default:
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(0f, 1f);
+                    rt.pivot = new Vector2(0f, 1f);
+                    break;
+            }
+
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = new Vector2(width, 14f);
+
+            var fillGo = new GameObject("Fill");
+            fillGo.transform.SetParent(go.transform, false);
+            var fill = fillGo.AddComponent<Image>();
+            fill.color = color;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fill.fillAmount = 0.35f;
+            var frt = fill.rectTransform;
+            frt.anchorMin = Vector2.zero;
+            frt.anchorMax = Vector2.one;
+            frt.offsetMin = new Vector2(2f, 2f);
+            frt.offsetMax = new Vector2(-2f, -2f);
+            return fill;
         }
 
         private static void SetLabelText(Text label, string text)
@@ -457,30 +717,79 @@ namespace BackbeatDiner.Core
             return label;
         }
 
-        private static GameObject CreateCube(string name, Transform parent, Vector3 localPos, Vector3 scale, Color color)
+        private GameObject CreatePrim(PrimitiveType type, string name, Transform parent, Vector3 localPos, Vector3 scale, Color color)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var go = GameObject.CreatePrimitive(type);
             go.name = name;
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
             go.transform.localScale = scale;
-            go.GetComponent<MeshRenderer>().sharedMaterial = CreateRuntimeMat(color);
+            ApplyMat(go, color);
             return go;
         }
 
-        private static Material CreateRuntimeMat(Color color)
+        private static GameObject CreatePrimStatic(PrimitiveType type, string name, Transform parent, Vector3 localPos, Vector3 scale, Color color)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("Standard");
+            var go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+            go.GetComponent<MeshRenderer>().sharedMaterial = CreateRuntimeMat(color, lit: true);
+            return go;
+        }
+
+        private void ApplyMat(GameObject go, Color color)
+        {
+            Material mat = null;
+            if (Approximately(color, Gold) && goldMaterial != null)
+            {
+                mat = goldMaterial;
+            }
+            else if (Approximately(color, Teal) && tealMaterial != null)
+            {
+                mat = tealMaterial;
+            }
+            else if (Approximately(color, Navy) && navyMaterial != null)
+            {
+                mat = navyMaterial;
+            }
+
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat != null ? mat : CreateRuntimeMat(color, lit: true);
+        }
+
+        private static bool Approximately(Color a, Color b)
+        {
+            return Mathf.Abs(a.r - b.r) < 0.02f
+                   && Mathf.Abs(a.g - b.g) < 0.02f
+                   && Mathf.Abs(a.b - b.b) < 0.02f;
+        }
+
+        private static Material CreateRuntimeMat(Color color, bool lit)
+        {
+            Shader shader = null;
+            if (lit)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            shader ??= Shader.Find("Universal Render Pipeline/Unlit")
+                       ?? Shader.Find("Unlit/Color")
+                       ?? Shader.Find("Standard");
             var mat = new Material(shader);
             if (mat.HasProperty("_BaseColor"))
             {
                 mat.SetColor("_BaseColor", color);
             }
-            else if (mat.HasProperty("_Color"))
+
+            if (mat.HasProperty("_Color"))
             {
                 mat.SetColor("_Color", color);
+            }
+
+            if (mat.HasProperty("_Smoothness"))
+            {
+                mat.SetFloat("_Smoothness", 0.35f);
             }
 
             return mat;

@@ -12,11 +12,14 @@ namespace BackbeatDiner.Rhythm
         [SerializeField] private Transform spawnPoint;
         [SerializeField] private Transform hitLine;
         [SerializeField] private float approachBeats = 2f;
-        [SerializeField] private float noteScale = 0.35f;
+        [SerializeField] private float noteScale = 0.32f;
         [SerializeField] private Color noteColor = new Color(0.788f, 0.635f, 0.153f); // #C9A227
+        [SerializeField] private Color noteCoreColor = new Color(1f, 0.92f, 0.55f);
+        [SerializeField] private bool usePolishedNotes = true;
 
         private readonly List<ActiveNote> _notes = new List<ActiveNote>(32);
         private Material _noteMaterial;
+        private Material _noteCoreMaterial;
         private double _approachSeconds;
 
         private struct ActiveNote
@@ -182,11 +185,15 @@ namespace BackbeatDiner.Rhythm
         private void SpawnNote(double targetDsp)
         {
             EnsureMaterial();
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var go = usePolishedNotes
+                ? GameObject.CreatePrimitive(PrimitiveType.Sphere)
+                : GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "Note";
             go.transform.SetParent(transform, worldPositionStays: true);
             go.transform.position = spawnPoint != null ? spawnPoint.position : transform.position;
-            go.transform.localScale = Vector3.one * noteScale;
+            go.transform.localScale = usePolishedNotes
+                ? new Vector3(noteScale * 1.15f, noteScale * 0.55f, noteScale * 1.35f)
+                : Vector3.one * noteScale;
 
             var col = go.GetComponent<Collider>();
             if (col != null)
@@ -198,6 +205,27 @@ namespace BackbeatDiner.Rhythm
             if (renderer != null)
             {
                 renderer.sharedMaterial = _noteMaterial;
+            }
+
+            if (usePolishedNotes)
+            {
+                var core = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                core.name = "NoteCore";
+                core.transform.SetParent(go.transform, false);
+                core.transform.localPosition = Vector3.zero;
+                core.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                core.transform.localScale = new Vector3(0.55f, 0.55f, 0.55f);
+                var coreCol = core.GetComponent<Collider>();
+                if (coreCol != null)
+                {
+                    Destroy(coreCol);
+                }
+
+                var coreRenderer = core.GetComponent<MeshRenderer>();
+                if (coreRenderer != null)
+                {
+                    coreRenderer.sharedMaterial = _noteCoreMaterial;
+                }
             }
 
             _notes.Add(new ActiveNote
@@ -218,7 +246,7 @@ namespace BackbeatDiner.Rhythm
 
         private void EnsureMaterial()
         {
-            if (_noteMaterial != null)
+            if (_noteMaterial != null && _noteCoreMaterial != null)
             {
                 return;
             }
@@ -226,15 +254,30 @@ namespace BackbeatDiner.Rhythm
             var shader = Shader.Find("Universal Render Pipeline/Unlit")
                          ?? Shader.Find("Unlit/Color")
                          ?? Shader.Find("Sprites/Default");
-            _noteMaterial = new Material(shader);
-            if (_noteMaterial.HasProperty("_BaseColor"))
+            if (_noteMaterial == null)
             {
-                _noteMaterial.SetColor("_BaseColor", noteColor);
+                _noteMaterial = BuildMat(shader, noteColor);
             }
-            else if (_noteMaterial.HasProperty("_Color"))
+
+            if (_noteCoreMaterial == null)
             {
-                _noteMaterial.SetColor("_Color", noteColor);
+                _noteCoreMaterial = BuildMat(shader, noteCoreColor);
             }
+        }
+
+        private static Material BuildMat(Shader shader, Color color)
+        {
+            var mat = new Material(shader);
+            if (mat.HasProperty("_BaseColor"))
+            {
+                mat.SetColor("_BaseColor", color);
+            }
+            else if (mat.HasProperty("_Color"))
+            {
+                mat.SetColor("_Color", color);
+            }
+
+            return mat;
         }
     }
 }

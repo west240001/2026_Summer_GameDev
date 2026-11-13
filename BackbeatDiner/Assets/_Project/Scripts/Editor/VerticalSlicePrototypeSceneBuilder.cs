@@ -17,6 +17,7 @@ namespace BackbeatDiner.Editor
         private const string ScenePath = "Assets/_Project/Scenes/VerticalSlicePrototype.unity";
         private const string GoldMatPath = "Assets/_Project/Art/Materials/BrandGold.mat";
         private const string TealMatPath = "Assets/_Project/Art/Materials/BrandTeal.mat";
+        private const string NavyMatPath = "Assets/_Project/Art/Materials/BrandNavy.mat";
         private const string ClickPath = "Assets/_Project/Audio/MetronomeClick.wav";
 
         [MenuItem("BACKBEAT DINER/Build Vertical Slice Prototype Scene")]
@@ -25,7 +26,11 @@ namespace BackbeatDiner.Editor
             BuildScene(setInBuildSettings: true);
             EditorUtility.DisplayDialog(
                 "BACKBEAT DINER",
-                "VerticalSlicePrototype.unity を作成しました。\n左=裏 / 右=表（ローカル2P）。\n裏: WASD+Space=ヒット、A/S/D/F=Beat-B。\n表: Enter=クック、J/K=配膳、矢印=Beat-F。\n配膳中は表ビート送信ロック。",
+                "VerticalSlicePrototype.unity を再生成しました。\n" +
+                "ローポリ3Dダイナー + 日本語HUD + 左右スプリットカメラ。\n" +
+                "左=裏リズムステーション / 右=表ダイナーフロア。\n" +
+                "裏: WASD+Space=ヒット、A/S/D/F=Beat-B。\n" +
+                "表: Enter=クック、J/K=配膳、矢印=Beat-F。",
                 "OK");
         }
 
@@ -51,15 +56,36 @@ namespace BackbeatDiner.Editor
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
+            // Soft fog preview in the authored scene (runtime also applies in bootstrap).
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.06f, 0.12f, 0.16f, 1f);
+            RenderSettings.fogDensity = 0.028f;
+            RenderSettings.ambientLight = new Color(0.18f, 0.24f, 0.28f);
+
             var cam = Camera.main;
             if (cam != null)
             {
                 cam.gameObject.name = "FrontCamera";
-                cam.transform.position = new Vector3(6f, 3.1f, -5.2f);
-                cam.transform.rotation = Quaternion.Euler(22f, 0f, 0f);
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = new Color(0.04f, 0.1f, 0.1f);
+                cam.transform.position = new Vector3(6f, 3.25f, -5.4f);
+                cam.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
+                cam.clearFlags = CameraClearFlags.Skybox;
+                cam.backgroundColor = new Color(0.055f, 0.122f, 0.2f);
                 cam.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+            }
+
+            var keyGo = GameObject.Find("Directional Light");
+            if (keyGo != null)
+            {
+                keyGo.name = "KeyLight";
+                var key = keyGo.GetComponent<Light>();
+                if (key != null)
+                {
+                    key.color = new Color(1f, 0.94f, 0.84f);
+                    key.intensity = 0.95f;
+                    key.shadows = LightShadows.Soft;
+                    keyGo.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
+                }
             }
 
             var root = new GameObject("VerticalSlicePrototypeRoot");
@@ -67,6 +93,7 @@ namespace BackbeatDiner.Editor
 
             var gold = AssetDatabase.LoadAssetAtPath<Material>(GoldMatPath);
             var teal = AssetDatabase.LoadAssetAtPath<Material>(TealMatPath);
+            var navy = AssetDatabase.LoadAssetAtPath<Material>(NavyMatPath);
             var click = AssetDatabase.LoadAssetAtPath<AudioClip>(ClickPath);
             var so = new SerializedObject(bootstrap);
             so.FindProperty("buildPlaceholders").boolValue = true;
@@ -74,6 +101,12 @@ namespace BackbeatDiner.Editor
             so.FindProperty("customerCount").intValue = 2;
             so.FindProperty("goldMaterial").objectReferenceValue = gold;
             so.FindProperty("tealMaterial").objectReferenceValue = teal;
+            var navyProp = so.FindProperty("navyMaterial");
+            if (navyProp != null)
+            {
+                navyProp.objectReferenceValue = navy;
+            }
+
             if (click != null)
             {
                 so.FindProperty("metronomeClick").objectReferenceValue = click;
@@ -103,6 +136,7 @@ namespace BackbeatDiner.Editor
             Directory.CreateDirectory("Assets/_Project/Art/Materials");
             EnsureUnlitMat(GoldMatPath, new Color(0.7882353f, 0.6352941f, 0.15294118f, 1f));
             EnsureUnlitMat(TealMatPath, new Color(0.101960784f, 0.419607843f, 0.419607843f, 1f));
+            EnsureUnlitMat(NavyMatPath, new Color(0.05490196f, 0.12156863f, 0.2f, 1f));
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }

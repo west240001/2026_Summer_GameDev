@@ -28,6 +28,9 @@ namespace BackbeatDiner.Core
         private Text _resultTitle;
         private Text _resultBody;
         private GameObject _resultRoot;
+        private Image _sessionFill;
+        private Image _prepFill;
+        private Image _serveFill;
 
         private int _prepUnits;
         private int _servedCount;
@@ -52,7 +55,10 @@ namespace BackbeatDiner.Core
             Text timerLabel,
             GameObject resultRoot,
             Text resultTitle,
-            Text resultBody)
+            Text resultBody,
+            Image sessionFill = null,
+            Image prepFill = null,
+            Image serveFill = null)
         {
             Unhook();
             _clock = clock;
@@ -63,6 +69,9 @@ namespace BackbeatDiner.Core
             _resultRoot = resultRoot;
             _resultTitle = resultTitle;
             _resultBody = resultBody;
+            _sessionFill = sessionFill;
+            _prepFill = prepFill;
+            _serveFill = serveFill;
 
             if (_hitInput != null)
             {
@@ -273,6 +282,27 @@ namespace BackbeatDiner.Core
                 var remain = Mathf.Max(0f, maxSeconds - _elapsed);
                 var beat = _clock != null ? _clock.BeatIndex : 0;
                 _timerLabel.text = $"残り {remain:0.0}s / ビート {beat}/{maxBeats}";
+            }
+
+            if (_sessionFill != null)
+            {
+                var timeRatio = maxSeconds > 0f ? Mathf.Clamp01(1f - _elapsed / maxSeconds) : 0f;
+                var beat = _clock != null ? _clock.BeatIndex : 0;
+                var beatRatio = maxBeats > 0 ? Mathf.Clamp01(1f - beat / (float)maxBeats) : 0f;
+                _sessionFill.fillAmount = Mathf.Min(timeRatio, beatRatio);
+                _sessionFill.color = _sessionFill.fillAmount < 0.25f ? Gold : Teal;
+            }
+
+            if (_prepFill != null)
+            {
+                _prepFill.fillAmount = Mathf.Clamp01(_prepUnits / 8f);
+                _prepFill.color = _prepUnits > 0 ? Gold : Teal * 0.55f;
+            }
+
+            if (_serveFill != null)
+            {
+                _serveFill.fillAmount = Mathf.Clamp01(_servedCount / 6f);
+                _serveFill.color = Teal;
             }
         }
 
