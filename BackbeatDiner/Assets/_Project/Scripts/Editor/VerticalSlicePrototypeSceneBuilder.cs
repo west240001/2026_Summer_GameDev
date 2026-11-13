@@ -77,6 +77,29 @@ namespace BackbeatDiner.Editor
                 cam.rect = new Rect(0f, 0f, 1f, 1f);
             }
 
+            // Authored RT capture cam for Back surveillance HUD (disabled; no AudioListener).
+            var survGo = new GameObject("SurveillanceCamera");
+            var survCam = survGo.AddComponent<Camera>();
+            survCam.enabled = false;
+            survCam.clearFlags = CameraClearFlags.Skybox;
+            survCam.backgroundColor = new Color(0.055f, 0.122f, 0.2f);
+            survCam.depth = -10;
+            survCam.nearClipPlane = 0.1f;
+            survCam.farClipPlane = 60f;
+            survCam.rect = new Rect(0f, 0f, 1f, 1f);
+            survCam.allowHDR = false;
+            survCam.allowMSAA = false;
+            if (cam != null)
+            {
+                survGo.transform.SetPositionAndRotation(cam.transform.position, cam.transform.rotation);
+                survCam.fieldOfView = cam.fieldOfView;
+            }
+            else
+            {
+                survGo.transform.position = new Vector3(6f, 3.25f, -5.4f);
+                survGo.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
+            }
+
             var keyGo = GameObject.Find("Directional Light");
             if (keyGo != null)
             {

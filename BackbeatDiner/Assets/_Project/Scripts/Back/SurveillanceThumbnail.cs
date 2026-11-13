@@ -20,12 +20,14 @@ namespace BackbeatDiner.Back
 
         [SerializeField] private NoteHighway highway;
         [SerializeField] private Camera frontCamera;
+        [SerializeField] private Camera surveillanceCamera;
         [SerializeField] private float updateHz = 2f;
         [SerializeField] private int textureWidth = 256;
         [SerializeField] private int textureHeight = 144;
 
         private RenderTexture _rt;
         private Camera _surveillanceCam;
+        private bool _ownsSurveillanceCam;
         private RawImage _raw;
         private GameObject _blindRoot;
         private Text _title;
@@ -38,8 +40,18 @@ namespace BackbeatDiner.Back
 
         public void Configure(NoteHighway noteHighway, Camera front)
         {
+            Configure(noteHighway, front, null);
+        }
+
+        public void Configure(NoteHighway noteHighway, Camera front, Camera surveillance)
+        {
             highway = noteHighway;
             frontCamera = front;
+            if (surveillance != null)
+            {
+                surveillanceCamera = surveillance;
+            }
+
             EnsurePipeline();
             EnsureUi();
             ApplyBlindVisual(IsBlind);
@@ -57,8 +69,14 @@ namespace BackbeatDiner.Back
             if (_surveillanceCam != null)
             {
                 _surveillanceCam.targetTexture = null;
-                Destroy(_surveillanceCam.gameObject);
+                _surveillanceCam.enabled = false;
+                if (_ownsSurveillanceCam)
+                {
+                    Destroy(_surveillanceCam.gameObject);
+                }
+
                 _surveillanceCam = null;
+                _ownsSurveillanceCam = false;
             }
 
             if (_rt != null)
@@ -161,14 +179,27 @@ namespace BackbeatDiner.Back
 
             if (_surveillanceCam == null)
             {
+                // Prefer scene-authored / Configure-assigned Camera. Runtime recreate is fallback only.
                 // Do not use `??` with GetComponent — Unity "fake null" destroyed Cameras are
                 // non-null in C# and skip AddComponent, then throw MissingComponentException on use.
-                // Scene reloads can also leave a named GO whose Camera is already destroyed.
-                var camGo = GameObject.Find("SurveillanceCamera");
                 Camera existing = null;
-                if (camGo != null)
+                if (surveillanceCamera != null)
                 {
-                    existing = camGo.GetComponent<Camera>();
+                    existing = surveillanceCamera;
+                }
+
+                GameObject camGo = null;
+                if (existing == null)
+                {
+                    camGo = GameObject.Find("SurveillanceCamera");
+                    if (camGo != null)
+                    {
+                        existing = camGo.GetComponent<Camera>();
+                    }
+                }
+                else
+                {
+                    camGo = existing.gameObject;
                 }
 
                 if (existing == null)
@@ -182,15 +213,18 @@ namespace BackbeatDiner.Back
 
                     camGo = new GameObject("SurveillanceCamera");
                     _surveillanceCam = camGo.AddComponent<Camera>();
+                    _ownsSurveillanceCam = true;
                 }
                 else
                 {
                     _surveillanceCam = existing;
+                    surveillanceCamera = existing;
+                    _ownsSurveillanceCam = false;
                 }
 
                 if (_surveillanceCam == null)
                 {
-                    Debug.LogError("[Surveillance] Failed to create SurveillanceCamera");
+                    Debug.LogError("[Surveillance] Failed to bind SurveillanceCamera");
                     return;
                 }
 
@@ -204,7 +238,7 @@ namespace BackbeatDiner.Back
                 _surveillanceCam.rect = new Rect(0f, 0f, 1f, 1f);
                 _surveillanceCam.allowHDR = false;
                 _surveillanceCam.allowMSAA = false;
-                var listener = camGo.GetComponent<AudioListener>();
+                var listener = _surveillanceCam.GetComponent<AudioListener>();
                 if (listener != null)
                 {
                     Destroy(listener);

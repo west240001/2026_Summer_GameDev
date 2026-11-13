@@ -67,6 +67,7 @@ namespace BackbeatDiner.Core
             EnsureLightsAndFog();
             _backCam = EnsureBackCamera();
             _frontCam = EnsureFrontCamera();
+            var surveillanceCam = EnsureSurveillanceCamera(_frontCam);
 
             if (!VerticalSliceRoleSelection.HasUserSelection)
             {
@@ -177,10 +178,10 @@ namespace BackbeatDiner.Core
             questReceive.Configure();
             questRequest.Configure(highway);
             // KG-4: Back surveillance of FrontCamera (~2Hz); only when viewing Back.
-            // Must not abort Start before setlist/clock — a thrown Configure previously blocked notes.
+            // Scene owns SurveillanceCamera; try/catch keeps StartSetlist reliable if HUD setup fails.
             try
             {
-                _surveillance.Configure(highway, _frontCam);
+                _surveillance.Configure(highway, _frontCam, surveillanceCam);
             }
             catch (System.Exception ex)
             {
@@ -1059,6 +1060,64 @@ namespace BackbeatDiner.Core
             cam.rect = new Rect(0f, 0f, 1f, 1f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 60f;
+            return cam;
+        }
+
+        /// <summary>
+        /// Scene-authored RT capture cam for Back surveillance. Never MainCamera / no AudioListener.
+        /// </summary>
+        private static Camera EnsureSurveillanceCamera(Camera front)
+        {
+            var go = GameObject.Find("SurveillanceCamera");
+            Camera cam = null;
+            if (go != null)
+            {
+                cam = go.GetComponent<Camera>();
+            }
+
+            if (cam == null)
+            {
+                if (go != null)
+                {
+                    go.name = "SurveillanceCamera_Stale";
+                    Object.Destroy(go);
+                }
+
+                go = new GameObject("SurveillanceCamera");
+                cam = go.AddComponent<Camera>();
+            }
+
+            go.tag = "Untagged";
+            cam.enabled = false;
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.backgroundColor = Navy;
+            cam.depth = -10;
+            cam.rect = new Rect(0f, 0f, 1f, 1f);
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 60f;
+            cam.allowHDR = false;
+            cam.allowMSAA = false;
+
+            var listener = go.GetComponent<AudioListener>();
+            if (listener != null)
+            {
+                Object.Destroy(listener);
+            }
+
+            if (front != null)
+            {
+                go.transform.SetPositionAndRotation(front.transform.position, front.transform.rotation);
+                cam.fieldOfView = front.fieldOfView;
+                cam.orthographic = front.orthographic;
+                cam.orthographicSize = front.orthographicSize;
+                cam.cullingMask = front.cullingMask;
+            }
+            else
+            {
+                go.transform.position = new Vector3(6f, 3.25f, -5.4f);
+                go.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
+            }
+
             return cam;
         }
 

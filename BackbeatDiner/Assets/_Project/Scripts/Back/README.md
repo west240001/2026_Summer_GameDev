@@ -8,6 +8,6 @@
 
 | Script | Role |
 |--------|------|
-| `SurveillanceThumbnail` | 表 `FrontCamera` の **監視** RawImage（約 **2Hz**）。`NoteHighway.HasActiveNotes` 中は最終フレーム保持＋ **BLIND** オーバーレイ。日本語ラベル「監視」 |
+| `SurveillanceThumbnail` | 表 `FrontCamera` の **監視** RawImage（約 **2Hz**）。シーンの `SurveillanceCamera`（RT 用・通常 disabled）を使用。`NoteHighway.HasActiveNotes` 中は最終フレーム保持＋ **BLIND** オーバーレイ。日本語ラベル「監視」 |
 
 設計サマリ: `Docs/DESIGN_LINKS.md` / Project Context `docs/kg-2-core-loop.md`, `docs/kg-4-back-rhythm-resources.md`
