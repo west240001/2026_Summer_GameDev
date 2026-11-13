@@ -2,7 +2,9 @@ using System.Collections;
 using BackbeatDiner.Back;
 using BackbeatDiner.Coop;
 using BackbeatDiner.Front;
+using BackbeatDiner.Net;
 using BackbeatDiner.Rhythm;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -14,6 +16,7 @@ namespace BackbeatDiner.Core
     /// Vertical slice — single-role fullscreen for two devices (one screen each).
     /// Back: kitchen + back HUD. Front: diner + front HUD.
     /// Shared <see cref="DaySessionState"/> / setlist always runs (host logic on this scene).
+    /// When NGO Host/Client: <see cref="DaySessionNetSync"/> mirrors salesScore + chartIndex.
     /// Solo: F8 toggles role view.
     /// </summary>
     public sealed class VerticalSliceBootstrap : MonoBehaviour
@@ -179,10 +182,11 @@ namespace BackbeatDiner.Core
             ApplyRolePresentation();
             _sessionStarted = true;
 
+            DaySetlistRunner runner = null;
             var useSetlist = setlist != null && setlist.ChartCount >= 1;
             if (useSetlist)
             {
-                var runner = systems.AddComponent<DaySetlistRunner>();
+                runner = systems.AddComponent<DaySetlistRunner>();
                 runner.Configure(setlist, clock, highway, session, hitInput, chartNameLabel, gapCoop);
                 runner.StartSetlist(0.35);
                 Debug.Log(
@@ -205,6 +209,90 @@ namespace BackbeatDiner.Core
                     $"[BACKBEAT DINER] VerticalSlicePrototype ready — role={VerticalSliceRoleSelection.DisplayName} fullscreen; " +
                     $"chart={chartLabel}; shared DaySessionState; F8 toggles role.");
             }
+
+            TryBindNetSessionSync(session, runner);
+        }
+
+        private void TryBindNetSessionSync(DaySessionState session, DaySetlistRunner runner)
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsListening)
+            {
+                if (NetSessionConfig.IsNetworked)
+                {
+                    Debug.LogWarning("[Netcode] Session marked networked but NetworkManager is not listening.");
+                }
+
+                return;
+            }
+
+            var status = EnsureNetStatusLabel();
+            if (nm.IsServer)
+            {
+                var sync = NetcodeSessionBootstrap.SpawnSyncOnServerIfNeeded();
+                sync?.BindLocalSources(session, runner, status);
+            }
+            else if (DaySessionNetSync.Instance != null)
+            {
+                DaySessionNetSync.Instance.BindLocalSources(session, runner, status);
+            }
+            else
+            {
+                StartCoroutine(WaitForClientNetSync(session, runner, status));
+            }
+
+            Debug.Log(
+                $"[Netcode] VerticalSlice bound — IsHost={nm.IsHost} IsClient={nm.IsClient} " +
+                $"role={VerticalSliceRoleSelection.DisplayName} fullscreen");
+        }
+
+        private IEnumerator WaitForClientNetSync(DaySessionState session, DaySetlistRunner runner, Text status)
+        {
+            var timeout = 5f;
+            while (timeout > 0f && DaySessionNetSync.Instance == null)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            DaySessionNetSync.Instance?.BindLocalSources(session, runner, status);
+        }
+
+        private Text EnsureNetStatusLabel()
+        {
+            if (_helpLabel == null)
+            {
+                return null;
+            }
+
+            var existing = GameObject.Find("NetSyncStatus");
+            if (existing != null)
+            {
+                return existing.GetComponent<Text>();
+            }
+
+            var parent = _helpLabel.transform.parent;
+            if (parent == null)
+            {
+                return null;
+            }
+
+            var go = new GameObject("NetSyncStatus");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -8f);
+            rt.sizeDelta = new Vector2(720f, 28f);
+            var text = go.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 16;
+            text.alignment = TextAnchor.UpperCenter;
+            text.color = Gold;
+            text.raycastTarget = false;
+            text.text = "NET …";
+            return text;
         }
 
         private void Update()

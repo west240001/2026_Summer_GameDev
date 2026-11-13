@@ -1,3 +1,6 @@
+using System.Collections;
+using BackbeatDiner.Net;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -8,7 +11,7 @@ namespace BackbeatDiner.Core
 {
     /// <summary>
     /// Title menu: full-bleed art, brand logo, catchcopy, role CTAs → VerticalSlicePrototype.
-    /// Two-device play: pick 裏 / 表 (or keys 1/2) before loading the day slice.
+    /// Two-device: pick 裏 / 表, then Host create or Join localhost (NGO), or offline start.
     /// </summary>
     public sealed class TitleMenuController : MonoBehaviour
     {
@@ -26,24 +29,49 @@ namespace BackbeatDiner.Core
         [SerializeField] private string playSceneName = VerticalSliceScene;
         [SerializeField] private Sprite titleBackground;
 
+        private Text _netStatusLabel;
+        private Text _roleSelectLabel;
+        private bool _netBusy;
+
         private void Start()
         {
             EnsureCamera();
             EnsureEventSystem();
             ResolveBackgroundSprite();
+            if (!VerticalSliceRoleSelection.HasUserSelection)
+            {
+                VerticalSliceRoleSelection.LoadSavedOrDefault();
+            }
+
             BuildUi();
-            Debug.Log("[BACKBEAT DINER] TitleMenu ready — 裏で始める / 表で始める (1/2) → " + playSceneName);
+            RefreshRoleSelectLabel();
+            Debug.Log(
+                "[BACKBEAT DINER] TitleMenu ready — role 1/2 · Host(H) / Join(J) localhost · offline 裏/表 → " +
+                playSceneName);
         }
 
         private void Update()
         {
+            if (_netBusy)
+            {
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
             {
-                StartDayAs(VerticalSlicePlayRole.Back);
+                SelectRole(VerticalSlicePlayRole.Back);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
             {
-                StartDayAs(VerticalSlicePlayRole.Front);
+                SelectRole(VerticalSlicePlayRole.Front);
+            }
+            else if (Input.GetKeyDown(KeyCode.H))
+            {
+                StartAsHost();
+            }
+            else if (Input.GetKeyDown(KeyCode.J))
+            {
+                StartAsClient();
             }
         }
 
@@ -51,12 +79,123 @@ namespace BackbeatDiner.Core
 
         public void StartDayAsFront() => StartDayAs(VerticalSlicePlayRole.Front);
 
-        public void StartDayAs(VerticalSlicePlayRole role)
+        public void SelectRoleBack() => SelectRole(VerticalSlicePlayRole.Back);
+
+        public void SelectRoleFront() => SelectRole(VerticalSlicePlayRole.Front);
+
+        public void SelectRole(VerticalSlicePlayRole role)
         {
             VerticalSliceRoleSelection.Select(role);
+            RefreshRoleSelectLabel();
+            Debug.Log($"[BACKBEAT DINER] Role selected → {VerticalSliceRoleSelection.DisplayName}");
+        }
+
+        public void StartDayAs(VerticalSlicePlayRole role)
+        {
+            NetSessionConfig.ConfigureOffline();
+            VerticalSliceRoleSelection.Select(role);
+            LoadPlayScene($"オフライン {VerticalSliceRoleSelection.DisplayName}");
+        }
+
+        public void StartAsHost()
+        {
+            if (_netBusy)
+            {
+                return;
+            }
+
+            EnsureRoleSelected();
+            SetNetStatus("ホスト作成中…");
+            if (!NetcodeSessionBootstrap.StartHost())
+            {
+                SetNetStatus("ホスト作成に失敗");
+                return;
+            }
+
+            LoadPlayScene($"Host {VerticalSliceRoleSelection.DisplayName}");
+        }
+
+        public void StartAsClient()
+        {
+            if (_netBusy)
+            {
+                return;
+            }
+
+            EnsureRoleSelected();
+            StartCoroutine(JoinHostThenLoad());
+        }
+
+        private IEnumerator JoinHostThenLoad()
+        {
+            _netBusy = true;
+            SetNetStatus($"参加中 {NetSessionConfig.DefaultAddress}:{NetSessionConfig.DefaultPort}…");
+            if (!NetcodeSessionBootstrap.StartClient())
+            {
+                SetNetStatus("参加に失敗");
+                _netBusy = false;
+                yield break;
+            }
+
+            var nm = NetworkManager.Singleton;
+            var timeout = 8f;
+            while (timeout > 0f && nm != null && !nm.IsConnectedClient && nm.IsClient)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (nm == null || !nm.IsConnectedClient)
+            {
+                SetNetStatus("参加タイムアウト — ホストを先に起動");
+                if (nm != null && nm.IsListening)
+                {
+                    nm.Shutdown();
+                }
+
+                _netBusy = false;
+                yield break;
+            }
+
+            LoadPlayScene($"Client {VerticalSliceRoleSelection.DisplayName}");
+            _netBusy = false;
+        }
+
+        private static void EnsureRoleSelected()
+        {
+            if (!VerticalSliceRoleSelection.HasUserSelection)
+            {
+                VerticalSliceRoleSelection.LoadSavedOrDefault();
+                VerticalSliceRoleSelection.Select(VerticalSliceRoleSelection.Selected);
+            }
+        }
+
+        private void LoadPlayScene(string reason)
+        {
             var target = string.IsNullOrWhiteSpace(playSceneName) ? VerticalSliceScene : playSceneName.Trim();
-            Debug.Log($"[BACKBEAT DINER] {VerticalSliceRoleSelection.DisplayName}で始める — loading " + target);
+            Debug.Log($"[BACKBEAT DINER] {reason} — loading " + target);
             SceneManager.LoadScene(target, LoadSceneMode.Single);
+        }
+
+        private void SetNetStatus(string message)
+        {
+            if (_netStatusLabel != null)
+            {
+                _netStatusLabel.text = message;
+            }
+
+            Debug.Log("[BACKBEAT DINER] " + message);
+        }
+
+        private void RefreshRoleSelectLabel()
+        {
+            if (_roleSelectLabel == null)
+            {
+                return;
+            }
+
+            _roleSelectLabel.text =
+                $"選択中の役: {VerticalSliceRoleSelection.DisplayName}（ホスト/参加前に 1=裏 / 2=表）";
         }
 
         private void ResolveBackgroundSprite()
@@ -125,8 +264,8 @@ namespace BackbeatDiner.Core
             stackRt.anchorMin = new Vector2(0.5f, 0f);
             stackRt.anchorMax = new Vector2(0.5f, 0f);
             stackRt.pivot = new Vector2(0.5f, 0f);
-            stackRt.anchoredPosition = new Vector2(0f, 96f);
-            stackRt.sizeDelta = new Vector2(1100f, 560f);
+            stackRt.anchoredPosition = new Vector2(0f, 72f);
+            stackRt.sizeDelta = new Vector2(1100f, 640f);
 
             var brand = CreateLabel(stack.transform, "BrandLogo", "BACKBEAT DINER",
                 new Vector2(0f, 430f), 78, Gold, FontStyle.Bold);
@@ -159,18 +298,34 @@ namespace BackbeatDiner.Core
             catch2.alignment = TextAnchor.MiddleCenter;
             catch2.rectTransform.sizeDelta = new Vector2(980f, 36f);
 
-            var roleLine = CreateLabel(stack.transform, "RoleLine", "2デバイス · 各1画面 — 役を選んで営業開始",
+            var roleLine = CreateLabel(stack.transform, "RoleLine", "2デバイス · 各1画面 — 役選択 → ホスト作成 / 参加",
                 new Vector2(0f, 170f), 18, new Color(Gold.r, Gold.g, Gold.b, 0.9f), FontStyle.Normal);
             roleLine.alignment = TextAnchor.MiddleCenter;
-            roleLine.rectTransform.sizeDelta = new Vector2(900f, 28f);
+            roleLine.rectTransform.sizeDelta = new Vector2(980f, 28f);
 
-            BuildRoleCta(stack.transform, "StartBackButton", "裏で始める", new Vector2(-210f, 100f), StartDayAsBack);
-            BuildRoleCta(stack.transform, "StartFrontButton", "表で始める", new Vector2(210f, 100f), StartDayAsFront);
+            _roleSelectLabel = CreateLabel(stack.transform, "RoleSelect", "選択中の役: —",
+                new Vector2(0f, 138f), 16, new Color(Cream.r, Cream.g, Cream.b, 0.85f), FontStyle.Normal);
+            _roleSelectLabel.alignment = TextAnchor.MiddleCenter;
+            _roleSelectLabel.rectTransform.sizeDelta = new Vector2(900f, 24f);
 
-            var hint = CreateLabel(stack.transform, "Hint", "1 = 裏　　2 = 表",
-                new Vector2(0f, 28f), 15, new Color(Teal.r, Teal.g, Teal.b, 0.75f), FontStyle.Normal);
+            BuildRoleCta(stack.transform, "SelectBackButton", "裏を選ぶ", new Vector2(-210f, 92f), SelectRoleBack, compact: true);
+            BuildRoleCta(stack.transform, "SelectFrontButton", "表を選ぶ", new Vector2(210f, 92f), SelectRoleFront, compact: true);
+
+            BuildRoleCta(stack.transform, "HostButton", "ホスト作成", new Vector2(-210f, 18f), StartAsHost);
+            BuildRoleCta(stack.transform, "JoinButton", "参加 localhost", new Vector2(210f, 18f), StartAsClient);
+
+            BuildRoleCta(stack.transform, "StartBackButton", "オフライン裏", new Vector2(-210f, -56f), StartDayAsBack, compact: true);
+            BuildRoleCta(stack.transform, "StartFrontButton", "オフライン表", new Vector2(210f, -56f), StartDayAsFront, compact: true);
+
+            _netStatusLabel = CreateLabel(stack.transform, "NetStatus", "Netcode: 待機（H=ホスト / J=参加）",
+                new Vector2(0f, -108f), 14, new Color(Teal.r, Teal.g, Teal.b, 0.9f), FontStyle.Normal);
+            _netStatusLabel.alignment = TextAnchor.MiddleCenter;
+            _netStatusLabel.rectTransform.sizeDelta = new Vector2(920f, 22f);
+
+            var hint = CreateLabel(stack.transform, "Hint", "1/2=役　H=ホスト　J=参加　オフライン=各ボタン",
+                new Vector2(0f, -140f), 14, new Color(Teal.r, Teal.g, Teal.b, 0.75f), FontStyle.Normal);
             hint.alignment = TextAnchor.MiddleCenter;
-            hint.rectTransform.sizeDelta = new Vector2(360f, 24f);
+            hint.rectTransform.sizeDelta = new Vector2(720f, 22f);
 
             var credits = CreateLabel(canvasGo.transform, "Credits", CreditsLine,
                 new Vector2(0f, 28f), 14, new Color(1f, 1f, 1f, 0.38f), FontStyle.Normal);
@@ -259,7 +414,13 @@ namespace BackbeatDiner.Core
                 new Color(0.02f, 0.04f, 0.07f, 0.35f));
         }
 
-        private void BuildRoleCta(Transform parent, string name, string label, Vector2 pos, UnityEngine.Events.UnityAction onClick)
+        private void BuildRoleCta(
+            Transform parent,
+            string name,
+            string label,
+            Vector2 pos,
+            UnityEngine.Events.UnityAction onClick,
+            bool compact = false)
         {
             var buttonGo = new GameObject(name);
             buttonGo.transform.SetParent(parent, false);
@@ -268,7 +429,7 @@ namespace BackbeatDiner.Core
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(360f, 72f);
+            rt.sizeDelta = compact ? new Vector2(300f, 52f) : new Vector2(360f, 64f);
 
             var glow = CreatePanel(
                 buttonGo.transform,

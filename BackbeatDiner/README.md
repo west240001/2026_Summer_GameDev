@@ -10,7 +10,7 @@
 | **代替** | チーム方針で **2022.3 LTS** に寄せる場合は、Hub でバージョンを揃えたうえで再生成される設定差分をコミットしてください |
 | **レンダリング** | **URP**（`Assets/_Project/Settings/PC_RPAsset.asset`） |
 | **入力** | **Input System**（新規プロジェクト設定。初回インポートを許可） |
-| **マルチプレイ（将来）** | **Netcode for GameObjects** + **Multiplayer Play Mode**（パッケージ済み、プロトはローカル2P優先） |
+| **マルチプレイ** | **Netcode for GameObjects** + **Multiplayer Play Mode**（TitleMenu ホスト作成 / 参加 localhost スキャフォールド済み） |
 | **Cinemachine** | パッケージ同梱（**任意**。カメラワーク確定後に有効化） |
 
 ## 開き方（Unity Hub）
@@ -24,14 +24,19 @@
 7. **縦スライス（1チャート＋表ミニ）**: `Assets/_Project/Scenes/VerticalSlicePrototype.unity` を開き **Play**（無い場合はメニュー **BACKBEAT DINER → Build Vertical Slice Prototype Scene**、または batchmode で `VerticalSlicePrototypeSceneBuilder.BuildFromCommandLine`）。
 8. スキャフォールド確認のみなら **`Assets/Scenes/Bootstrap.unity`** を **Play**。Console に `[BACKBEAT DINER] Bootstrap ready` が出れば OK（`GameBootstrap` は `DontDestroyOnLoad` シェル）。
 
-## タイトルメニュー — 役選択 → 営業開始（操作）
+## タイトルメニュー — 役選択 → ホスト / 参加 / オフライン
 
-Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャッチコピー「見えない相棒と、最高の一皿を。」。**2デバイス（各1画面）**前提で、端末ごとに役を選んで縦スライス日を開始します。
+Gold `#C9A227` / Teal `#1A6B6B` / Navy `#0E1F33` のタイトル画面。キャッチコピー「見えない相棒と、最高の一皿を。」。**2デバイス（各1画面）**前提で、端末ごとに役を選んでからホスト作成または localhost 参加（またはオフライン開始）。
 
 | 操作 | 内容 |
 |------|------|
-| **裏で始める**（クリック） / **1** | 裏役で `VerticalSlicePrototype` を全画面ロード |
-| **表で始める**（クリック） / **2** | 表役で同上 |
+| **裏を選ぶ** / **1** | 役=裏（まだシーン遷移しない） |
+| **表を選ぶ** / **2** | 役=表 |
+| **ホスト作成** / **H** | NGO Host（`127.0.0.1:7777`）→ `VerticalSlicePrototype` 全画面 |
+| **参加 localhost** / **J** | NGO Client → 同シーン（ホスト起動後） |
+| **オフライン裏 / 表** | ネットなしで従来どおり縦スライス開始 |
+
+最小同期: `DaySessionNetSync` が **売上スコア** と **チャート index** を NetworkVariable で共有（`Assets/_Project/Scripts/Net/`）。
 
 シーン: `Assets/_Project/Scenes/TitleMenu.unity`（Build Settings **先頭**）  
 再生成: **BACKBEAT DINER → Build Title Menu Scene**（`TitleMenuController` / `TitleMenuSceneBuilder`）。
@@ -121,7 +126,7 @@ Art/ Audio/ UI/ Prefabs/ Settings/   … URP・ボリューム等
 3. **ビート送信プロト**（着手済み）: KG-3 C3 **BeatLexicon**（B1..F4 静的定義、8s／同一20s CD、日本語パッド、配膳中ロック）。
 4. **1日縦切り**（着手済み）: `VerticalSlicePrototype` — **役ごと全画面**（2デバイス）、裏1チャート＋表インスタントクック＋**F1+ 配膳リズム**、共有 `DaySessionState`、結果オーバーレイ。
 5. **タイトル → 役選択**（着手済み）: `TitleMenu` → **裏で始める / 表で始める**（1/2）で縦スライス開始。
-6. **ネットワーク**：上記が固まってから Netcode（裏 SoT）。事前に **Multiplayer Play Mode** で仮想2クライアント検証可。
+6. **ネットワーク**（スキャフォールド済み）: TitleMenu **ホスト作成 / 参加 localhost** → 役ごと全画面。`DaySessionNetSync` で score / chart index。続きは裏 SoT・ビート同期。**Multiplayer Play Mode** で仮想2クライアント検証可。
 
 詳細マイルストーンは Cursor Project Context の **`docs/unity-production-plan.md`** を正本とします。リポジトリ内要約は `Docs/DESIGN_LINKS.md` を参照。
 

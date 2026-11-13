@@ -24,7 +24,7 @@ namespace BackbeatDiner.Editor
                 "BACKBEAT DINER",
                 "TitleMenu.unity を作成しました。\n" +
                 "背景アート + BACKBEAT DINER / キャッチコピー。\n" +
-                "裏で始める / 表で始める（1/2）→ VerticalSlicePrototype 全画面。\n" +
+                "役選択 → ホスト作成 / 参加 localhost（1/2, H/J）→ VerticalSlice 全画面。\n" +
                 "Build Settings 先頭に TitleMenu を登録済みです。",
                 "OK");
         }
